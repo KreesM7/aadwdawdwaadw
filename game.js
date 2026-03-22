@@ -1,15 +1,16 @@
 // ═══════════════════════════════════════════════════════
-//  لعبة الخلية — Pointy-top hexagons, 5×5, zero gap
+//  لعبة الخلية — Pointy-top hexagons, 5×5
 //
-//  POINTY-TOP geometry:
-//    width  = √3 * R
-//    height = 2 * R
-//    col step (DX) = √3 * R
-//    row step (DY) = 1.5 * R
-//    odd ROWS shift RIGHT by DX/2
+//  POINTY-TOP corner indices (angle = i*60° + 30°, Y-axis points DOWN):
+//    i=0: 30°  → lower-right
+//    i=1: 90°  → BOTTOM TIP  (cx, cy+R)
+//    i=2: 150° → lower-left
+//    i=3: 210° → upper-left
+//    i=4: 270° → TOP TIP     (cx, cy-R)
+//    i=5: 330° → upper-right
 //
-//  Green  team: connects TOP row (r=0) → BOTTOM row (r=4)
-//  Orange team: connects LEFT col (c=0) → RIGHT col (c=4)
+//  Green  team: TOP row → BOTTOM row
+//  Orange team: LEFT col → RIGHT col
 // ═══════════════════════════════════════════════════════
 
 const ALL_LETTERS = [...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'];
@@ -103,13 +104,74 @@ function build() {
       cells.push({ id: `${r}_${c}`, row: r, col: c, letter: pool[i++], owner: null });
 }
 
+// ── Draw background zones using real hex corner positions ──
+function drawBackground() {
+  const W = cv.width, H = cv.height;
+  const P = (r, c) => pointyCorners(cxy(r,c).x, cxy(r,c).y, R);
+
+  // Dark base
+  ctx.fillStyle = '#0f0a1e';
+  ctx.fillRect(0, 0, W, H);
+
+  // GREEN TOP: canvas-top edge + bottom zigzag of row 0
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(W, 0);
+  for (let c = COLS - 1; c >= 0; c--) {
+    const p = P(0, c);
+    ctx.lineTo(...p[0]); // lower-right
+    ctx.lineTo(...p[1]); // bottom tip
+    ctx.lineTo(...p[2]); // lower-left
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#3dba4e'; ctx.fill();
+
+  // GREEN BOTTOM: canvas-bottom edge + top zigzag of last row
+  ctx.beginPath();
+  ctx.moveTo(0, H); ctx.lineTo(W, H);
+  for (let c = COLS - 1; c >= 0; c--) {
+    const p = P(ROWS - 1, c);
+    ctx.lineTo(...p[5]); // upper-right
+    ctx.lineTo(...p[4]); // top tip
+    ctx.lineTo(...p[3]); // upper-left
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#3dba4e'; ctx.fill();
+
+  // ORANGE LEFT: canvas-left edge + right zigzag of col 0
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, H);
+  for (let r = ROWS - 1; r >= 0; r--) {
+    const p = P(r, 0);
+    ctx.lineTo(...p[1]); // bottom tip
+    ctx.lineTo(...p[0]); // lower-right
+    ctx.lineTo(...p[5]); // upper-right
+    ctx.lineTo(...p[4]); // top tip
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#f57c22'; ctx.fill();
+
+  // ORANGE RIGHT: canvas-right edge + left zigzag of last col
+  ctx.beginPath();
+  ctx.moveTo(W, 0); ctx.lineTo(W, H);
+  for (let r = ROWS - 1; r >= 0; r--) {
+    const p = P(r, COLS - 1);
+    ctx.lineTo(...p[1]); // bottom tip
+    ctx.lineTo(...p[2]); // lower-left
+    ctx.lineTo(...p[3]); // upper-left
+    ctx.lineTo(...p[4]); // top tip
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#f57c22'; ctx.fill();
+}
+
 function draw() {
   ctx.clearRect(0, 0, cv.width, cv.height);
+  drawBackground();
 
   cells.forEach(cell => {
     const { x, y } = cxy(cell.row, cell.col);
     const isSel = selId === cell.id;
-    const isHov = hovId === cell.id && !cell.owner;
+    const isHov = hovId === cell.id && pendingTeam;
 
     const BORDER = R * 0.14;
     const outerC = pointyCorners(x, y, R);
@@ -193,22 +255,22 @@ function sxy(e) {
 cv.addEventListener('mousemove', e => {
   const { px, py } = sxy(e);
   const cell = cellAt(px, py);
-  const nh = (cell && !cell.owner) ? cell.id : null;
+  const nh = cell ? cell.id : null;
   if (nh !== hovId) { hovId = nh; draw(); }
-  cv.style.cursor = (cell && !cell.owner) ? 'pointer' : 'default';
+  cv.style.cursor = cell ? 'pointer' : 'default';
 });
 cv.addEventListener('mouseleave', () => { hovId = null; draw(); });
 cv.addEventListener('click', e => {
   const { px, py } = sxy(e);
   const cell = cellAt(px, py);
-  if (!cell || cell.owner) return;
+  if (!cell) return;
   onCell(cell.id);
 });
 cv.addEventListener('touchend', e => {
   e.preventDefault();
   const { px, py } = sxy(e);
   const cell = cellAt(px, py);
-  if (!cell || cell.owner) return;
+  if (!cell) return;
   onCell(cell.id);
 }, { passive: false });
 
@@ -228,7 +290,7 @@ function onCell(id) {
 
 function doAssign(id, team) {
   const cell = cells.find(c => c.id === id);
-  if (!cell || cell.owner) { clearSt(); draw(); return; }
+  if (!cell) { clearSt(); draw(); return; }
   cell.owner = team; draw();
   if (won(team)) {
     wins[team]++;

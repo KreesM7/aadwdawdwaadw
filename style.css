@@ -4,19 +4,12 @@ html, body {
   font-family:'Cairo',sans-serif; background:#111;
   display:flex; align-items:center; justify-content:center;
 }
-.card { display:flex; width:100vw; height:100vh; }
+
+/* Side panel on the RIGHT, play area on the LEFT */
+.card { display:flex; flex-direction:row-reverse; width:100vw; height:100vh; }
 
 /* ── Play area ── */
 .play { position:relative; flex:1; overflow:hidden; }
-
-/* Sharp 4-zone background — pointy-top orientation
-   Green  = top & bottom (team connects top→bottom)
-   Orange = left & right  (team connects left→right) */
-.bg-top    { position:absolute; inset:0; background:#3dba4e; clip-path:polygon(0 0,100% 0,100% 40%,50% 60%,0 40%); }
-.bg-bottom { position:absolute; inset:0; background:#3dba4e; clip-path:polygon(0 60%,50% 40%,100% 60%,100% 100%,0 100%); }
-.bg-left   { position:absolute; inset:0; background:#f57c22; clip-path:polygon(0 0,0 100%,40% 60%,60% 50%,40% 40%); }
-.bg-right  { position:absolute; inset:0; background:#f57c22; clip-path:polygon(100% 0,100% 100%,60% 60%,40% 50%,60% 40%); }
-
 #c { position:absolute; inset:0; width:100%; height:100%; display:block; }
 
 /* ── Side panel ── */
@@ -26,8 +19,9 @@ html, body {
   display:flex; flex-direction:column; align-items:center;
   padding:clamp(10px,1.8vh,18px) clamp(10px,1.4vw,16px);
   gap:clamp(7px,1.2vh,12px); position:relative;
+  order:1; /* always last = right side */
 }
-.menu-btn { position:absolute; top:12px; right:13px; display:flex; flex-direction:column; gap:4px; cursor:pointer; opacity:.55; }
+.menu-btn { position:absolute; top:12px; left:13px; display:flex; flex-direction:column; gap:4px; cursor:pointer; opacity:.55; }
 .menu-btn span { display:block; width:18px; height:2px; background:#fff; border-radius:2px; }
 
 .round-title { margin-top:clamp(20px,3.5vh,36px); font-size:clamp(1.5rem,3.5vw,2.4rem); font-weight:900; color:#fff; text-align:center; line-height:1.05; }
