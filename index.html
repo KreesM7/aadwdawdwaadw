@@ -221,7 +221,7 @@
 
 <script src="game.js"></script>
 <script>
-// Swatch helpers (inline — need DOM access)
+// Swatch helpers
 function pickSwatch(team, color, btn) {
   const swatchesEl = document.getElementById(`swatches-${team==='green'?'g':'o'}`);
   swatchesEl.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active-swatch'));
@@ -234,20 +234,13 @@ function pickCustom(team, color) {
   onColorChange(team, color);
 }
 
-// Rounds picker
+// Rounds picker — directly sets the global winsToWin from game.js
 let _roundsVal = 2;
 function changeRounds(delta) {
   _roundsVal = Math.max(1, Math.min(10, _roundsVal + delta));
   document.getElementById('rounds-to-win').textContent = _roundsVal;
-  // Sync to game
-  winsToWin = _roundsVal;
+  winsToWin = _roundsVal; // sync to game.js global immediately
 }
-// Override startGame to read from JS var
-const _sg = startGame;
-startGame = function() {
-  winsToWin = _roundsVal;
-  _sg();
-};
 </script>
 </body>
 </html>

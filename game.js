@@ -761,23 +761,28 @@ function initLogoCanvas() {
   const lc=document.getElementById('logo-canvas');
   if (!lc) return;
   const lctx=lc.getContext('2d');
+
   function drawLogo(ts) {
     const t=ts*0.001;
-    const W=lc.parentElement.clientWidth||500;
-    const H=Math.round(W*0.42);
-    if (lc.width!==W||lc.height!==H) { lc.width=W; lc.height=H; }
+    // Read width from the parent each frame so it stays correct on resize
+    const parent = lc.parentElement;
+    const W = (parent && parent.clientWidth > 0) ? parent.clientWidth : 500;
+    const H = Math.round(W*0.46);
+    if (lc.width!==W || lc.height!==H) { lc.width=W; lc.height=H; }
     lctx.clearRect(0,0,W,H);
     const sz1=Math.round(W*0.185);
     const bob1=Math.sin(t*1.2)*4, bob2=Math.sin(t*1.2+1)*4;
-    drawWord(lctx,logoText1,W/2,H*0.38+bob1,sz1,'#f9e000','#8a5a00',t,1);
+    drawWord(lctx,logoText1,W/2,H*(logoText2?0.32:0.52)+bob1,sz1,'#f9e000','#8a5a00',t);
     if (logoText2) {
-      const sz2=Math.min(Math.round(W*0.16),Math.round(W*2.8/(logoText2.length+1)));
-      drawWord(lctx,logoText2,W/2,H*0.82+bob2,sz2,'#ff4444','#6a0000',t,-1);
+      const sz2=Math.min(Math.round(W*0.165), Math.round(W*3/(logoText2.length+1)));
+      drawWord(lctx,logoText2,W/2,H*0.78+bob2,sz2,'#ff4444','#6a0000',t);
     }
     logoAnimId=requestAnimationFrame(drawLogo);
   }
+
   if (logoAnimId) cancelAnimationFrame(logoAnimId);
-  logoAnimId=requestAnimationFrame(drawLogo);
+  // Defer one frame so the DOM has laid out and clientWidth is real
+  requestAnimationFrame(()=>{ logoAnimId=requestAnimationFrame(drawLogo); });
 }
 
 function drawWord(ctx, text, cx, cy, size, fillColor, shadowColor, t) {
@@ -893,9 +898,10 @@ function startGame() {
   const oName   = document.getElementById('menu-name-o').value.trim()||'الفريق الثاني';
   const rawInput= document.getElementById('game-name-input').value.trim();
   const gameName= rawInput?`لعبة خلية ${rawInput}`:'لعبة الخلية';
-  // Rounds to win
-  const rtwEl = document.getElementById('rounds-to-win');
-  winsToWin = rtwEl ? Math.max(1,parseInt(rtwEl.value)||2) : 2;
+  // winsToWin is already set correctly by changeRounds() in the inline script
+  // Just make sure wins-needed badge reflects it
+  const wEl = document.getElementById('wins-needed');
+  if (wEl) wEl.textContent = winsToWin;
 
   document.getElementById('name-g').value=gName;
   document.getElementById('name-o').value=oName;
@@ -912,19 +918,28 @@ function startGame() {
   window.addEventListener('resize',resize);
   document.fonts.ready.then(()=>resize());
   resize();
-  // Update wins indicator
   updateScore();
-  // Show round 1 intro
   setTimeout(()=>showRoundTransition('الأولى',()=>{}),600);
 }
 
 function goToMenu() {
+  // Close every overlay and cinematic first
+  ['ov-r','ov-g'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+  });
+  const wt = document.getElementById('winner-transition');
+  if (wt) wt.remove();
+  const rt = document.getElementById('round-transition');
+  if (rt) rt.remove();
+
   const menuEl=document.getElementById('main-menu');
   const gameEl=document.getElementById('game-screen');
   menuEl.style.display=''; menuEl.classList.remove('fade-out');
   gameEl.classList.remove('visible');
   setTimeout(()=>gameEl.classList.add('hidden'),500);
-  initMenuCanvas();
+  // Restart menu + logo canvas after layout settles
+  setTimeout(()=>initMenuCanvas(), 100);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -932,7 +947,8 @@ function goToMenu() {
 // ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   applyTheme();
-  initMenuCanvas();
+  // Defer so the browser has painted and clientWidth values are real
+  setTimeout(()=>initMenuCanvas(), 50);
 });
 
 const _baseApplyTheme=applyTheme;
