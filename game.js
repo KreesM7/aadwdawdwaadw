@@ -168,6 +168,40 @@ function playWin() {
   });
 }
 
+// Soft "tick" when a cell is highlighted yellow
+function playSelectSound() {
+  unlockAudio().then(a => {
+    if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(900, a.currentTime);
+      o.frequency.exponentialRampToValueAtTime(1100, a.currentTime + 0.06);
+      g.gain.setValueAtTime(0.1, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.1);
+      o.start(a.currentTime); o.stop(a.currentTime + 0.1);
+    } catch(e) {}
+  });
+}
+
+// Soft "pop" when a cell is cleared back to unowned
+function playUnselectSound() {
+  unlockAudio().then(a => {
+    if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(500, a.currentTime);
+      o.frequency.exponentialRampToValueAtTime(250, a.currentTime + 0.12);
+      g.gain.setValueAtTime(0.12, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.15);
+      o.start(a.currentTime); o.stop(a.currentTime + 0.15);
+    } catch(e) {}
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 //  GEOMETRY
 // ═══════════════════════════════════════════════════════
@@ -311,9 +345,19 @@ function draw() {
 
   cells.forEach(cell => {
     const {x,y} = cxy(cell.row, cell.col);
-    const isSel = selId === cell.id;
-    const isHov = hovId === cell.id && pendingTeam;
+    const isSel  = selId === cell.id;
+    // isHov: hovering over this cell
+    const isHov  = hovId === cell.id;
     const BORDER = R * 0.13;
+
+    // What will the next click do? (used for fill preview)
+    const nextStep = !pendingTeam && isHov ? (
+        (!cell.owner && !isSel)            ? 'select'
+      : (isSel && !cell.owner)             ? 'green'
+      : cell.owner === 'green'             ? 'orange'
+      : cell.owner === 'orange'            ? 'clear'
+      : null
+    ) : null;
 
     // ── Outer border ring ──
     const outerC = pointyCorners(x, y, R);
@@ -334,11 +378,33 @@ function draw() {
     if      (cell.owner==='green')  fill = '#4ade80';
     else if (cell.owner==='orange') fill = '#fb923c';
     else if (isSel)                 fill = '#fde047';
-    else if (isHov)
+    else if (pendingTeam && isHov)
       fill = pendingTeam==='green'  ? '#bbf7d0'
            : pendingTeam==='orange' ? '#fed7aa' : '#f5f3ff';
+    // Cycle hover previews
+    else if (nextStep === 'select')  fill = '#fffde7'; // soft yellow tint
+    else if (nextStep === 'green')   fill = '#bbf7d0'; // green tint on selected
+    else if (nextStep === 'orange')  fill = '#fed7aa'; // orange tint on green
+    else if (nextStep === 'clear')   fill = '#ffe4e4'; // red tint on orange
     else fill = T.hexEmpty;
     ctx.fillStyle = fill; ctx.fill();
+
+    // ── Small cycle badge in top-right of hovered cell ──
+    if (nextStep && !pendingTeam) {
+      const badgeEmoji =
+          nextStep === 'select'  ? '🟡'
+        : nextStep === 'green'   ? '🟢'
+        : nextStep === 'orange'  ? '🟠'
+        : '✖';
+      const bs = Math.round(R * 0.3);
+      ctx.font = `${bs}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Position: top-right area of the hex
+      const bx = x + R * 0.42;
+      const by = y - R * 0.52;
+      ctx.fillText(badgeEmoji, bx, by);
+    }
 
     // ── Letter with outline ──
     const fs = Math.round(R * 0.52);
@@ -400,6 +466,18 @@ cv.addEventListener('mousemove', e => {
   const {px,py} = sxy(e), cell = cellAt(px,py);
   const nh = cell ? cell.id : null;
   if (nh !== hovId) { hovId = nh; draw(); }
+  // Show what the next click will do
+  if (cell && !pendingTeam) {
+    const nextAction =
+        (!cell.owner && selId !== cell.id) ? '🟡 اختيار'
+      : (selId === cell.id && !cell.owner) ? '🟢 أخضر'
+      : cell.owner === 'green'             ? '🟠 برتقالي'
+      : cell.owner === 'orange'            ? '✖ إلغاء'
+      : 'pointer';
+    cv.title = nextAction;
+  } else {
+    cv.title = '';
+  }
   cv.style.cursor = cell ? 'pointer' : 'default';
 });
 cv.addEventListener('mouseleave', () => { hovId = null; draw(); });
@@ -429,8 +507,36 @@ function pickTeam(t) {
 }
 
 function onCell(id) {
-  if (pendingTeam) { doAssign(id, pendingTeam); clearSt(); }
-  else { selId = id; draw(); }
+  // If a team is already pending from the side buttons, honour that first
+  if (pendingTeam) { doAssign(id, pendingTeam); clearSt(); return; }
+
+  const cell = cells.find(c => c.id === id);
+  if (!cell) return;
+
+  // ── Click-cycle ──────────────────────────────────────
+  //  unowned & unselected  → select (yellow highlight)
+  //  selected (yellow)     → assign GREEN
+  //  green                 → assign ORANGE
+  //  orange                → clear back to unowned
+  // ────────────────────────────────────────────────────
+  if (!cell.owner && selId !== id) {
+    // Step 1: select / highlight yellow
+    selId = id;
+    playSelectSound();
+    draw();
+  } else if (selId === id && !cell.owner) {
+    // Step 2: assign GREEN
+    selId = null;
+    doAssign(id, 'green');
+  } else if (cell.owner === 'green') {
+    // Step 3: assign ORANGE
+    doAssign(id, 'orange');
+  } else if (cell.owner === 'orange') {
+    // Step 4: clear back to unowned
+    cell.owner = null;
+    playUnselectSound();
+    draw();
+  }
 }
 
 function doAssign(id, team) {
