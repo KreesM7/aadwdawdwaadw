@@ -872,3 +872,138 @@ function showRoundTransition(roundName, onDone) {
     setTimeout(() => { el.remove(); onDone(); }, 600);
   }, 2200);
 }
+
+// ═══════════════════════════════════════════════════════
+//  WINNER CINEMATIC ANIMATION
+// ═══════════════════════════════════════════════════════
+
+function showWinnerTransition(team, onDone) {
+  const old = document.getElementById('winner-transition');
+  if (old) old.remove();
+
+  const isGreen   = team === 'green';
+  const teamName  = names[team];
+  const teamColor = isGreen ? '#22c55e' : '#f97316';
+  const teamShadow= isGreen ? '#064e1e' : '#7c2d00';
+  const bgGrad    = isGreen
+    ? 'linear-gradient(145deg,#052e16,#14532d,#166534,#052e16)'
+    : 'linear-gradient(145deg,#431407,#7c2d12,#9a3412,#431407)';
+  const emoji     = isGreen ? '🟢' : '🟠';
+
+  const el = document.createElement('div');
+  el.id = 'winner-transition';
+  el.innerHTML = `
+    <div class="wt-bg" style="background:${bgGrad}"></div>
+    <div class="wt-rays"></div>
+    <div class="wt-particles" id="wt-particles"></div>
+    <div class="wt-content">
+      <div class="wt-trophy">🏆</div>
+      <div class="wt-congrats">مبروك الفوز</div>
+      <div class="wt-team-name" style="color:${teamColor};text-shadow:4px 4px 0 ${teamShadow},0 0 50px ${teamColor}99">
+        ${emoji} ${teamName} ${emoji}
+      </div>
+      <div class="wt-sub">حسم البطولة بجولتين!</div>
+      <div class="wt-stars">
+        <span class="wt-star" style="animation-delay:0.6s">⭐</span>
+        <span class="wt-star" style="animation-delay:0.75s;font-size:2.8rem">⭐</span>
+        <span class="wt-star" style="animation-delay:0.9s">⭐</span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  // Spawn flying star/hex particles
+  const pw = el.querySelector('#wt-particles');
+  const symbols = ['⭐','✨','⬡','🏅','💫','⬢'];
+  for (let i = 0; i < 24; i++) {
+    const p = document.createElement('span');
+    p.className = 'wt-particle';
+    p.textContent = symbols[i % symbols.length];
+    p.style.cssText = `
+      left:${Math.random()*100}vw;
+      top:${80 + Math.random()*30}vh;
+      font-size:${1 + Math.random()*2.5}rem;
+      animation-delay:${0.2 + Math.random()*0.8}s;
+      animation-duration:${1.2 + Math.random()*1.2}s;
+      color:${[teamColor,'#f9e000','#ffffff','#e879f9'][i%4]};
+    `;
+    pw.appendChild(p);
+  }
+
+  // Epic win fanfare
+  unlockAudio().then(a => {
+    if (!a) return;
+    try {
+      // Big bass impact
+      const ob = a.createOscillator(), gb = a.createGain();
+      ob.connect(gb); gb.connect(a.destination);
+      ob.type = 'sine';
+      ob.frequency.setValueAtTime(60, a.currentTime);
+      ob.frequency.exponentialRampToValueAtTime(120, a.currentTime + 0.2);
+      gb.gain.setValueAtTime(0.5, a.currentTime);
+      gb.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.6);
+      ob.start(a.currentTime); ob.stop(a.currentTime + 0.6);
+
+      // Victory fanfare — rising arpeggio
+      const fanfare = isGreen
+        ? [392, 523, 659, 784, 1047, 1319]
+        : [349, 440, 587, 698, 932, 1175];
+      fanfare.forEach((freq, i) => {
+        const o = a.createOscillator(), g = a.createGain();
+        o.connect(g); g.connect(a.destination);
+        o.type = i < 3 ? 'triangle' : 'sine';
+        o.frequency.value = freq;
+        const t = a.currentTime + 0.1 + i * 0.11;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.28, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        o.start(t); o.stop(t + 0.5);
+      });
+
+      // Final sustain chord
+      [523, 659, 784].forEach((freq, i) => {
+        const o = a.createOscillator(), g = a.createGain();
+        o.connect(g); g.connect(a.destination);
+        o.type = 'sine'; o.frequency.value = freq;
+        const t = a.currentTime + 0.85;
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+        o.start(t); o.stop(t + 1.2);
+      });
+    } catch(e) {}
+  });
+
+  // Spawn confetti on top
+  spawnConfetti();
+
+  // Auto-dismiss after 4s, then show normal win overlay
+  setTimeout(() => {
+    el.classList.add('wt-exit');
+    setTimeout(() => {
+      el.remove();
+      if (onDone) onDone();
+    }, 700);
+  }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  PATCH showGameWin to use the cinematic first
+// ═══════════════════════════════════════════════════════
+const _origShowGameWin = showGameWin;
+showGameWin = function(team) {
+  showWinnerTransition(team, () => {
+    _origShowGameWin(team);
+  });
+};
+
+// ═══════════════════════════════════════════════════════
+//  PATCH startGame to show "الجولة الأولى" intro first
+// ═══════════════════════════════════════════════════════
+const _origStartGame = startGame;
+startGame = function() {
+  _origStartGame();
+  // Show round-1 intro after the screen transition settles
+  setTimeout(() => {
+    showRoundTransition('الأولى', () => { /* board already built */ });
+  }, 600);
+};
