@@ -11,41 +11,31 @@
 
 <!-- ═══════════════════ MAIN MENU ═══════════════════ -->
 <div id="main-menu" class="menu-screen">
-
-  <!-- Full-screen hex background canvas -->
   <canvas id="menu-canvas"></canvas>
+  <button class="menu-corner-btn" id="menu-theme-btn" onclick="toggleMute()" title="صوت">🔊</button>
 
-  <!-- Theme toggle -->
-  <button class="menu-corner-btn" id="menu-theme-btn" onclick="toggleTheme()">☀️</button>
-
-  <!-- ── ONE TALL CARD: logo at top (fixed), settings scroll below ── -->
   <div class="menu-card" id="menu-card">
 
-    <!-- LOGO — always visible at top of card, doesn't scroll -->
+    <!-- LOGO -->
     <div class="menu-logo-area">
       <span class="logo-word logo-w1" id="logo-w1">لعبة</span>
       <span class="logo-word logo-w2" id="logo-w2">الخلية</span>
       <span class="logo-word logo-w3" id="logo-w3"></span>
     </div>
 
-    <!-- SCROLLABLE SETTINGS BODY -->
     <div class="menu-body">
 
       <!-- Game name -->
       <div class="menu-field">
         <div class="mf-label">اسم اللعبة</div>
-        <input class="mf-input" id="game-name-input"
-               placeholder="لعبة الخلية" maxlength="24"
-               oninput="onGameNameInput(this.value)"/>
+        <input class="mf-input" id="game-name-input" placeholder="لعبة الخلية" maxlength="24" oninput="onGameNameInput(this.value)"/>
       </div>
 
       <div class="menu-sep"></div>
-
-      <!-- Teams & Colors -->
       <div class="mf-label">إعدادات الفرق</div>
-      <div class="menu-teams-grid">
 
-        <!-- Team A -->
+      <!-- Teams -->
+      <div class="menu-teams-grid">
         <div class="menu-team-block team-block-a">
           <div class="team-block-hdr">
             <span id="preview-color-g" class="team-preview-dot" style="background:#4ade80"></span>
@@ -62,17 +52,13 @@
               <button class="sw" style="background:#38bdf8" onclick="pickSwatch('green','#38bdf8',this)"></button>
               <button class="sw" style="background:#818cf8" onclick="pickSwatch('green','#818cf8',this)"></button>
               <button class="sw" style="background:#f9e000" onclick="pickSwatch('green','#f9e000',this)"></button>
+              <button class="sw" style="background:#f43f5e" onclick="pickSwatch('green','#f43f5e',this)"></button>
               <button class="sw" style="background:#ffffff" onclick="pickSwatch('green','#ffffff',this)"></button>
-              <label class="sw sw-custom" title="لون مخصص">
-                <input type="color" id="custom-g" value="#4ade80" oninput="pickCustom('green',this.value)"/>✏
-              </label>
+              <label class="sw sw-custom"><input type="color" id="custom-g" value="#4ade80" oninput="pickCustom('green',this.value)"/>✏</label>
             </div>
           </div>
         </div>
-
         <div class="teams-vs">VS</div>
-
-        <!-- Team B -->
         <div class="menu-team-block team-block-b">
           <div class="team-block-hdr">
             <span id="preview-color-o" class="team-preview-dot" style="background:#fb923c"></span>
@@ -89,10 +75,9 @@
               <button class="sw" style="background:#f43f5e" onclick="pickSwatch('orange','#f43f5e',this)"></button>
               <button class="sw" style="background:#e879f9" onclick="pickSwatch('orange','#e879f9',this)"></button>
               <button class="sw" style="background:#f9e000" onclick="pickSwatch('orange','#f9e000',this)"></button>
+              <button class="sw" style="background:#a855f7" onclick="pickSwatch('orange','#a855f7',this)"></button>
               <button class="sw" style="background:#ffffff" onclick="pickSwatch('orange','#ffffff',this)"></button>
-              <label class="sw sw-custom" title="لون مخصص">
-                <input type="color" id="custom-o" value="#fb923c" oninput="pickCustom('orange',this.value)"/>✏
-              </label>
+              <label class="sw sw-custom"><input type="color" id="custom-o" value="#fb923c" oninput="pickCustom('orange',this.value)"/>✏</label>
             </div>
           </div>
         </div>
@@ -104,12 +89,25 @@
       <div class="rounds-row">
         <div class="rounds-labels">
           <span class="rounds-title">عدد الجولات للفوز</span>
-          <span class="rounds-sub">المقدّم يختار</span>
+          <span class="rounds-sub">المقدّم يختار (1–10)</span>
         </div>
         <div class="rounds-picker">
           <button class="rounds-btn" onclick="changeRounds(-1)">−</button>
           <span class="rounds-val" id="rounds-to-win">2</span>
           <button class="rounds-btn" onclick="changeRounds(1)">+</button>
+        </div>
+      </div>
+
+      <div class="menu-sep"></div>
+
+      <!-- Custom round names (collapsible) -->
+      <button class="howto-btn" onclick="toggleCustomRounds()">
+        <span>أسماء مخصصة للجولات (اختياري)</span>
+        <span id="cr-arrow">▼</span>
+      </button>
+      <div class="howto-body" id="custom-rounds-body">
+        <div class="cr-grid" id="cr-grid">
+          <!-- filled by JS -->
         </div>
       </div>
 
@@ -124,17 +122,15 @@
         <div class="howto-row"><span class="hd green-hd"></span><span>الفريق الأول يوصل من <b>فوق لتحت</b></span></div>
         <div class="howto-row"><span class="hd orange-hd"></span><span>الفريق الثاني يوصل من <b>يسار ليمين</b></span></div>
         <div class="howto-row"><span class="hd yellow-hd"></span><span>اضغط الخلية: مرة تختار — ثانية فريق١ — ثالثة فريق٢ — رابعة مسح</span></div>
-        <div class="howto-row"><span class="hd purple-hd"></span><span>المقدّم يعطي النقطة لمن أجاب أسرع</span></div>
+        <div class="howto-row"><span class="hd purple-hd"></span><span>دبل-كليك على أي خلية لتكبيرها على الشاشة</span></div>
       </div>
 
       <!-- Start -->
       <button class="menu-start-btn" onclick="startGame()">ابدأ اللعبة ◄</button>
-      <div class="menu-version" id="menu-version">v2.0 — لعبة الخلية</div>
-
-    </div><!-- /menu-body -->
-  </div><!-- /menu-card -->
-</div><!-- /main-menu -->
-
+      <div class="menu-version" id="menu-version">v3.0 — لعبة الخلية</div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════ GAME SCREEN ═══════════════════ -->
 <div id="game-screen" class="game-screen hidden">
@@ -145,11 +141,21 @@
   </div>
 
   <div class="side" id="side">
+    <!-- Toolbar -->
     <div class="side-toolbar">
       <button class="icon-btn" onclick="goToMenu()" title="القائمة">⌂</button>
-      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()">☀️</button>
+      <button class="icon-btn" id="mute-btn" onclick="toggleMute()" title="صوت">🔊</button>
+      <button class="icon-btn" id="fs-btn" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
     </div>
 
+    <!-- Tool row -->
+    <div class="tool-row">
+      <button class="tool-btn" id="swap-btn" onclick="swapTeams()" title="تبديل الفرق" style="transition:transform .4s">⇄</button>
+      <button class="tool-btn" id="reveal-btn" onclick="toggleReveal()" title="وضع الكشف">👁</button>
+      <button class="tool-btn" onclick="undoMove()" title="تراجع">↩</button>
+    </div>
+
+    <!-- Mini logo -->
     <div class="side-logo">
       <span class="side-logo-w1">لعبة</span>
       <span class="side-logo-w2" id="game-title-bar">الخلية</span>
@@ -157,21 +163,32 @@
 
     <div class="round-title">الجولة<br><span class="hi" id="rname">الأولى</span></div>
 
-    <div class="score-row">
-      <div class="score-team">
-        <div class="sn" id="sn-g">الفريق الأول</div>
-        <div class="sv" id="sv-g">0</div>
+    <!-- Score -->
+    <div class="score-block">
+      <div class="score-row">
+        <div class="score-team">
+          <div class="sn" id="sn-g">الفريق الأول</div>
+          <div class="sv score-anim" id="sv-g">0</div>
+        </div>
+        <div class="score-center">
+          <div class="score-vs">جولات</div>
+          <div class="wins-label">/<span id="wins-needed">2</span></div>
+        </div>
+        <div class="score-team">
+          <div class="sn" id="sn-o">الفريق الثاني</div>
+          <div class="sv score-anim" id="sv-o">0</div>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;padding:0 4px;gap:1px">
-        <span class="score-vs">جولات</span>
-        <span style="font-size:.65rem;font-weight:900;color:rgba(255,255,255,.4)">/<span id="wins-needed">2</span></span>
-      </div>
-      <div class="score-team">
-        <div class="sn" id="sn-o">الفريق الثاني</div>
-        <div class="sv" id="sv-o">0</div>
+      <!-- Series wins -->
+      <div class="series-row">
+        <span class="series-lbl">سلسلة:</span>
+        <span id="series-g" style="color:#4ade80;font-weight:900">0</span>
+        <span class="series-dash">—</span>
+        <span id="series-o" style="color:#fb923c;font-weight:900">0</span>
       </div>
     </div>
 
+    <!-- Team buttons -->
     <input class="tin" id="name-g" value="الفريق الأول" placeholder="الفريق الأول" maxlength="16" oninput="syncNames()"/>
     <button class="tbtn" id="btn-g" onclick="pickTeam('green')">
       <span class="chk" id="chk-g">✓</span>
@@ -188,6 +205,7 @@
 
     <div class="divider"></div>
 
+    <!-- History -->
     <div class="hist-wrap">
       <div class="hist-title">آخر الحركات</div>
       <div class="hist-list" id="history-list">
@@ -202,8 +220,10 @@
 </div>
 </div>
 
+<!-- Confetti -->
 <div class="cf-wrap" id="cf"></div>
 
+<!-- Round win -->
 <div class="ov" id="ov-r">
   <div class="ov-card">
     <div class="ov-e" id="ov-r-e"></div>
@@ -213,6 +233,7 @@
   </div>
 </div>
 
+<!-- Game win -->
 <div class="ov" id="ov-g">
   <div class="gw-card">
     <div class="gw-e">🏆</div>
@@ -220,31 +241,56 @@
     <div class="gw-nm" id="gw-nm">الفريق الأول</div>
     <div class="gw-sub" id="gw-sub">حسم البطولة!</div>
     <div class="gw-btns">
-      <button class="gw-b" onclick="newGame()">مرة ثانية</button>
+      <button class="gw-b" onclick="showMatchSummary()">📊 ملخص المباراة</button>
+      <button class="gw-b gw-b2" onclick="newGame()">مرة ثانية</button>
       <button class="gw-b gw-b-menu" onclick="goToMenu()">القائمة</button>
     </div>
   </div>
 </div>
 
+<!-- Match summary -->
+<div id="match-summary" class="ov"></div>
+
+<!-- Zoom overlay -->
+<!-- injected by JS -->
+
 <script src="game.js"></script>
 <script>
-function pickSwatch(team, color, btn) {
-  document.getElementById('swatches-'+(team==='green'?'g':'o'))
-    .querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
-  btn.classList.add('sw-active');
-  onColorChange(team, color);
+function pickSwatch(team,color,btn){
+  document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
+  btn.classList.add('sw-active');onColorChange(team,color);
 }
-function pickCustom(team, color) {
-  document.getElementById('swatches-'+(team==='green'?'g':'o'))
-    .querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
-  onColorChange(team, color);
+function pickCustom(team,color){
+  document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
+  onColorChange(team,color);
 }
-let _roundsVal = 2;
-function changeRounds(delta) {
-  _roundsVal = Math.max(1, Math.min(10, _roundsVal + delta));
-  document.getElementById('rounds-to-win').textContent = _roundsVal;
-  winsToWin = _roundsVal;
+let _roundsVal=2;
+function changeRounds(delta){
+  _roundsVal=Math.max(1,Math.min(10,_roundsVal+delta));
+  document.getElementById('rounds-to-win').textContent=_roundsVal;
+  winsToWin=_roundsVal;
+  // rebuild custom round inputs
+  buildCustomRoundInputs();
 }
+let crOpen=false;
+function toggleCustomRounds(){
+  crOpen=!crOpen;
+  document.getElementById('custom-rounds-body').classList.toggle('open',crOpen);
+  document.getElementById('cr-arrow').textContent=crOpen?'▲':'▼';
+}
+function buildCustomRoundInputs(){
+  const grid=document.getElementById('cr-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  const RN=['الأولى','الثانية','الثالثة','الرابعة','الخامسة','السادسة','السابعة','الثامنة','التاسعة','العاشرة'];
+  for(let i=1;i<=_roundsVal;i++){
+    const row=document.createElement('div');row.className='cr-row';
+    row.innerHTML=`<span class="cr-num">جولة ${i}</span>
+      <input class="mf-input cr-input" id="custom-round-${i}" placeholder="${RN[i-1]||i}" maxlength="16"/>`;
+    grid.appendChild(row);
+  }
+}
+buildCustomRoundInputs();
 </script>
 </body>
 </html>
