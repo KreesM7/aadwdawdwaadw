@@ -529,7 +529,7 @@ html, body {
 /* ══════════════════════════════════════════════
    ROUND TRANSITION
 ══════════════════════════════════════════════ */
-#round-transition { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; pointer-events:none; overflow:hidden; }
+#round-transition { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; overflow:hidden; pointer-events:all; cursor:default; }
 .rt-bg { position:absolute; inset:0; background:linear-gradient(145deg,#3b1280,#5427a0,#7c3aed,#3b1280); background-size:300% 300%; animation:rt-bg-slide .38s cubic-bezier(.22,.68,0,1.2) forwards,rt-bg-shift 2.5s ease infinite; transform:translateY(-100%); }
 @keyframes rt-bg-slide { from{transform:translateY(-100%)} to{transform:translateY(0)} }
 @keyframes rt-bg-shift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
@@ -559,7 +559,7 @@ html, body {
 /* ══════════════════════════════════════════════
    WINNER CINEMATIC
 ══════════════════════════════════════════════ */
-#winner-transition { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; pointer-events:none; overflow:hidden; }
+#winner-transition { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; overflow:hidden; pointer-events:all; cursor:default; }
 .wt-bg { position:absolute; inset:0; background-size:300% 300%; animation:wt-bg-in .5s cubic-bezier(.22,.68,0,1.1) forwards,wt-bg-shift 4s ease infinite; transform:scale(0); transform-origin:center; }
 @keyframes wt-bg-in { from{transform:scale(0);border-radius:100%} to{transform:scale(1);border-radius:0} }
 @keyframes wt-bg-shift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
