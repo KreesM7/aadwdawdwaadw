@@ -217,13 +217,6 @@ html,body{width:100vw;height:100vh;overflow:hidden;font-family:'Cairo',sans-seri
 .summary-btns{display:flex;gap:8px;justify-content:center;}
 
 /* ══ ZOOM OVERLAY ═══════════════════════════════════ */
-#zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:800;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .28s;}
-#zoom-overlay.zoom-visible{opacity:1;}
-.zoom-card{position:relative;background:linear-gradient(145deg,#3b1280,#1e0450);border:2px solid rgba(160,110,255,.4);border-radius:28px;padding:40px 60px 36px;text-align:center;animation:pop .3s cubic-bezier(.175,.885,.32,1.5);box-shadow:0 24px 70px rgba(0,0,0,.7);}
-.zoom-letter{font-family:'Cairo',sans-serif;font-weight:900;font-size:clamp(6rem,18vw,12rem);line-height:1;}
-.zoom-owner{font-family:'Cairo',sans-serif;font-weight:700;font-size:1rem;margin-top:8px;color:rgba(255,255,255,.6);}
-.zoom-close{position:absolute;top:12px;left:14px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:1rem;cursor:pointer;transition:background .18s;}
-.zoom-close:hover{background:rgba(255,255,255,.25);}
 
 /* ══ WINNER / ROUND TRANSITION ══════════════════════ */
 #winner-transition{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:all;cursor:default;}
@@ -257,3 +250,22 @@ html,body{width:100vw;height:100vh;overflow:hidden;font-family:'Cairo',sans-seri
 .cf-wrap{position:fixed;inset:0;pointer-events:none;z-index:599;overflow:hidden;}
 .cf{position:absolute;top:-20px;border-radius:2px;animation:fall linear forwards;}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* ── Two pickers row ── */
+.two-pickers-row{display:flex;align-items:stretch;gap:0;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:15px;overflow:hidden;}
+.picker-block{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:11px 10px;}
+.picker-divider{width:1px;background:rgba(255,255,255,.1);flex-shrink:0;}
+
+/* ── Grid size buttons ── */
+.grid-size-btns{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;}
+.gsz-btn{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-family:'Cairo',sans-serif;font-size:.65rem;font-weight:700;padding:4px 7px;cursor:pointer;transition:all .15s;}
+.gsz-btn:hover{background:rgba(255,255,255,.18);}
+.gsz-active{background:rgba(249,224,0,.2)!important;border-color:#f9e000!important;color:#f9e000!important;font-weight:900;}
+
+/* ── Collapsible sections ── */
+.collapsible-btn{width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);border-radius:12px;padding:9px 14px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;direction:rtl;display:flex;align-items:center;gap:8px;transition:background .18s;}
+.collapsible-btn:hover{background:rgba(255,255,255,.13);}
+.coll-badge{font-size:.58rem;background:rgba(249,224,0,.2);color:#f9e000;border:1px solid rgba(249,224,0,.3);border-radius:6px;padding:1px 6px;flex-shrink:0;}
+.coll-arrow{font-size:.7rem;margin-right:auto;flex-shrink:0;}
+.collapsible-body{max-height:0;overflow:hidden;transition:max-height .35s ease;display:flex;flex-direction:column;gap:6px;}
+.collapsible-body.coll-open{max-height:400px;padding-top:8px;}

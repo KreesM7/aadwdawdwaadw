@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لعبة الخلية</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 93,27 93,73 50,95 7,73 7,27' fill='%235b1fa0' stroke='%23f9e000' stroke-width='5'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%2300DFFF' font-family='Arial' font-weight='900'>خ</text></svg>"/>
 <link rel="stylesheet" href="style.css">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
@@ -15,8 +16,6 @@
   <button class="menu-corner-btn" id="menu-theme-btn" onclick="toggleMute()" title="صوت">🔊</button>
 
   <div class="menu-card" id="menu-card">
-
-    <!-- LOGO -->
     <div class="menu-logo-area">
       <span class="logo-word logo-w1" id="logo-w1">لعبة</span>
       <span class="logo-word logo-w2" id="logo-w2">الخلية</span>
@@ -85,44 +84,62 @@
 
       <div class="menu-sep"></div>
 
-      <!-- Rounds to win -->
-      <div class="rounds-row">
-        <div class="rounds-labels">
-          <span class="rounds-title">عدد الجولات للفوز</span>
-          <span class="rounds-sub">المقدّم يختار (1–10)</span>
+      <!-- Rounds + Grid size side by side -->
+      <div class="two-pickers-row">
+        <div class="picker-block">
+          <div class="rounds-labels">
+            <span class="rounds-title">جولات للفوز</span>
+            <span class="rounds-sub">المقدّم يختار</span>
+          </div>
+          <div class="rounds-picker">
+            <button class="rounds-btn" onclick="changeRounds(-1)">−</button>
+            <span class="rounds-val" id="rounds-to-win">2</span>
+            <button class="rounds-btn" onclick="changeRounds(1)">+</button>
+          </div>
         </div>
-        <div class="rounds-picker">
-          <button class="rounds-btn" onclick="changeRounds(-1)">−</button>
-          <span class="rounds-val" id="rounds-to-win">2</span>
-          <button class="rounds-btn" onclick="changeRounds(1)">+</button>
+
+        <div class="picker-divider"></div>
+
+        <div class="picker-block">
+          <div class="rounds-labels">
+            <span class="rounds-title">حجم الشبكة</span>
+            <span class="rounds-sub">عدد الخلايا</span>
+          </div>
+          <div class="grid-size-btns" id="grid-size-btns">
+            <button class="gsz-btn" onclick="setGridSize(3,this)">3×3</button>
+            <button class="gsz-btn" onclick="setGridSize(4,this)">4×4</button>
+            <button class="gsz-btn gsz-active" onclick="setGridSize(5,this)">5×5</button>
+            <button class="gsz-btn" onclick="setGridSize(6,this)">6×6</button>
+            <button class="gsz-btn" onclick="setGridSize(7,this)">7×7</button>
+          </div>
         </div>
       </div>
 
       <div class="menu-sep"></div>
 
-      <!-- Custom round names (collapsible) -->
-      <button class="howto-btn" onclick="toggleCustomRounds()">
-        <span>أسماء مخصصة للجولات (اختياري)</span>
-        <span id="cr-arrow">▼</span>
+      <!-- Custom round names -->
+      <button class="collapsible-btn" onclick="toggleSection('custom-rounds-body','cr-arrow')">
+        <span>أسماء مخصصة للجولات</span>
+        <span class="coll-badge">اختياري</span>
+        <span class="coll-arrow" id="cr-arrow">▼</span>
       </button>
-      <div class="howto-body" id="custom-rounds-body">
-        <div class="cr-grid" id="cr-grid">
-          <!-- filled by JS -->
-        </div>
+      <div class="collapsible-body" id="custom-rounds-body">
+        <div class="cr-grid" id="cr-grid"></div>
       </div>
 
       <div class="menu-sep"></div>
 
       <!-- How to play -->
-      <button class="howto-btn" onclick="toggleHowto()">
+      <button class="collapsible-btn" onclick="toggleSection('howto-body','howto-arrow')">
         <span>كيف تلعب؟</span>
-        <span id="howto-arrow">▼</span>
+        <span class="coll-arrow" id="howto-arrow">▼</span>
       </button>
-      <div class="howto-body" id="howto-body">
+      <div class="collapsible-body" id="howto-body">
         <div class="howto-row"><span class="hd green-hd"></span><span>الفريق الأول يوصل من <b>فوق لتحت</b></span></div>
         <div class="howto-row"><span class="hd orange-hd"></span><span>الفريق الثاني يوصل من <b>يسار ليمين</b></span></div>
-        <div class="howto-row"><span class="hd yellow-hd"></span><span>اضغط الخلية: مرة تختار — ثانية فريق١ — ثالثة فريق٢ — رابعة مسح</span></div>
-        <div class="howto-row"><span class="hd purple-hd"></span><span>دبل-كليك على أي خلية لتكبيرها على الشاشة</span></div>
+        <div class="howto-row"><span class="hd yellow-hd"></span><span>اضغط الخلية: مرة للأخضر — ثانية للبرتقالي — ثالثة مسح</span></div>
+        <div class="howto-row"><span class="hd purple-hd"></span><span>المقدّم يعطي النقطة لمن أجاب أسرع — لا دور محدد</span></div>
+        <div class="howto-row"><span class="hd yellow-hd"></span><span>أول فريق يفوز بعدد الجولات المحددة يحسم البطولة</span></div>
       </div>
 
       <!-- Start -->
@@ -141,45 +158,27 @@
   </div>
 
   <div class="side" id="side">
-    <!-- Toolbar -->
     <div class="side-toolbar">
       <button class="icon-btn" onclick="goToMenu()" title="القائمة">⌂</button>
       <button class="icon-btn" id="mute-btn" onclick="toggleMute()" title="صوت">🔊</button>
       <button class="icon-btn" id="fs-btn" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
     </div>
-
-    <!-- Tool row -->
     <div class="tool-row">
       <button class="tool-btn" id="swap-btn" onclick="swapTeams()" title="تبديل الفرق" style="transition:transform .4s">⇄</button>
       <button class="tool-btn" id="reveal-btn" onclick="toggleReveal()" title="وضع الكشف">👁</button>
       <button class="tool-btn" onclick="undoMove()" title="تراجع">↩</button>
     </div>
-
-    <!-- Mini logo -->
     <div class="side-logo">
       <span class="side-logo-w1">لعبة</span>
       <span class="side-logo-w2" id="game-title-bar">الخلية</span>
     </div>
-
     <div class="round-title">الجولة<br><span class="hi" id="rname">الأولى</span></div>
-
-    <!-- Score -->
     <div class="score-block">
       <div class="score-row">
-        <div class="score-team">
-          <div class="sn" id="sn-g">الفريق الأول</div>
-          <div class="sv score-anim" id="sv-g">0</div>
-        </div>
-        <div class="score-center">
-          <div class="score-vs">جولات</div>
-          <div class="wins-label">/<span id="wins-needed">2</span></div>
-        </div>
-        <div class="score-team">
-          <div class="sn" id="sn-o">الفريق الثاني</div>
-          <div class="sv score-anim" id="sv-o">0</div>
-        </div>
+        <div class="score-team"><div class="sn" id="sn-g">الفريق الأول</div><div class="sv score-anim" id="sv-g">0</div></div>
+        <div class="score-center"><div class="score-vs">جولات</div><div class="wins-label">/<span id="wins-needed">2</span></div></div>
+        <div class="score-team"><div class="sn" id="sn-o">الفريق الثاني</div><div class="sv score-anim" id="sv-o">0</div></div>
       </div>
-      <!-- Series wins -->
       <div class="series-row">
         <span class="series-lbl">سلسلة:</span>
         <span id="series-g" style="color:#4ade80;font-weight:900">0</span>
@@ -187,32 +186,19 @@
         <span id="series-o" style="color:#fb923c;font-weight:900">0</span>
       </div>
     </div>
-
-    <!-- Team buttons -->
     <input class="tin" id="name-g" value="الفريق الأول" placeholder="الفريق الأول" maxlength="16" oninput="syncNames()"/>
     <button class="tbtn" id="btn-g" onclick="pickTeam('green')">
-      <span class="chk" id="chk-g">✓</span>
-      <span id="lbl-g">الفريق الأول</span>
-      <span class="team-dot-g"></span>
+      <span class="chk" id="chk-g">✓</span><span id="lbl-g">الفريق الأول</span><span class="team-dot-g"></span>
     </button>
-
     <input class="tin" id="name-o" value="الفريق الثاني" placeholder="الفريق الثاني" maxlength="16" oninput="syncNames()"/>
     <button class="tbtn" id="btn-o" onclick="pickTeam('orange')">
-      <span class="chk" id="chk-o">✓</span>
-      <span id="lbl-o">الفريق الثاني</span>
-      <span class="team-dot-o"></span>
+      <span class="chk" id="chk-o">✓</span><span id="lbl-o">الفريق الثاني</span><span class="team-dot-o"></span>
     </button>
-
     <div class="divider"></div>
-
-    <!-- History -->
     <div class="hist-wrap">
       <div class="hist-title">آخر الحركات</div>
-      <div class="hist-list" id="history-list">
-        <div class="hist-empty">لا توجد حركات بعد</div>
-      </div>
+      <div class="hist-list" id="history-list"><div class="hist-empty">لا توجد حركات بعد</div></div>
     </div>
-
     <div class="divider"></div>
     <button class="ctrl cw" onclick="newRound()">جولة جديدة</button>
     <button class="ctrl cd" onclick="newGame()">لعبة جديدة</button>
@@ -220,10 +206,8 @@
 </div>
 </div>
 
-<!-- Confetti -->
 <div class="cf-wrap" id="cf"></div>
 
-<!-- Round win -->
 <div class="ov" id="ov-r">
   <div class="ov-card">
     <div class="ov-e" id="ov-r-e"></div>
@@ -233,7 +217,6 @@
   </div>
 </div>
 
-<!-- Game win -->
 <div class="ov" id="ov-g">
   <div class="gw-card">
     <div class="gw-e">🏆</div>
@@ -241,24 +224,20 @@
     <div class="gw-nm" id="gw-nm">الفريق الأول</div>
     <div class="gw-sub" id="gw-sub">حسم البطولة!</div>
     <div class="gw-btns">
-      <button class="gw-b" onclick="showMatchSummary()">📊 ملخص المباراة</button>
+      <button class="gw-b" onclick="showMatchSummary()">📊 ملخص</button>
       <button class="gw-b gw-b2" onclick="newGame()">مرة ثانية</button>
       <button class="gw-b gw-b-menu" onclick="goToMenu()">القائمة</button>
     </div>
   </div>
 </div>
 
-<!-- Match summary -->
 <div id="match-summary" class="ov"></div>
-
-<!-- Zoom overlay -->
-<!-- injected by JS -->
 
 <script src="game.js"></script>
 <script>
 function pickSwatch(team,color,btn){
   document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
-  btn.classList.add('sw-active');onColorChange(team,color);
+  btn.classList.add('sw-active'); onColorChange(team,color);
 }
 function pickCustom(team,color){
   document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
@@ -269,14 +248,18 @@ function changeRounds(delta){
   _roundsVal=Math.max(1,Math.min(10,_roundsVal+delta));
   document.getElementById('rounds-to-win').textContent=_roundsVal;
   winsToWin=_roundsVal;
-  // rebuild custom round inputs
   buildCustomRoundInputs();
 }
-let crOpen=false;
-function toggleCustomRounds(){
-  crOpen=!crOpen;
-  document.getElementById('custom-rounds-body').classList.toggle('open',crOpen);
-  document.getElementById('cr-arrow').textContent=crOpen?'▲':'▼';
+function setGridSize(n,btn){
+  document.getElementById('grid-size-btns').querySelectorAll('.gsz-btn').forEach(b=>b.classList.remove('gsz-active'));
+  btn.classList.add('gsz-active');
+  gridSize=n;
+}
+function toggleSection(bodyId,arrowId){
+  const body=document.getElementById(bodyId);
+  const arrow=document.getElementById(arrowId);
+  const open=body.classList.toggle('coll-open');
+  if(arrow) arrow.textContent=open?'▲':'▼';
 }
 function buildCustomRoundInputs(){
   const grid=document.getElementById('cr-grid');
@@ -285,12 +268,14 @@ function buildCustomRoundInputs(){
   const RN=['الأولى','الثانية','الثالثة','الرابعة','الخامسة','السادسة','السابعة','الثامنة','التاسعة','العاشرة'];
   for(let i=1;i<=_roundsVal;i++){
     const row=document.createElement('div');row.className='cr-row';
-    row.innerHTML=`<span class="cr-num">جولة ${i}</span>
-      <input class="mf-input cr-input" id="custom-round-${i}" placeholder="${RN[i-1]||i}" maxlength="16"/>`;
+    row.innerHTML=`<span class="cr-num">جولة ${i}</span><input class="mf-input cr-input" id="custom-round-${i}" placeholder="${RN[i-1]||i}" maxlength="16"/>`;
     grid.appendChild(row);
   }
 }
 buildCustomRoundInputs();
+// keep old names working
+function toggleHowto(){ toggleSection('howto-body','howto-arrow'); }
+function toggleCustomRounds(){ toggleSection('custom-rounds-body','cr-arrow'); }
 </script>
 </body>
 </html>
