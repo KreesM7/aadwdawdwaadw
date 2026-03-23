@@ -25,7 +25,6 @@ let revealMode = false;   // letters hidden until claimed
 let undoStack  = [];      // [{id, prevOwner}]
 let roundHistory = [];    // [{rNum, winner, name}] — match summary
 let customRoundNames = []; // set from menu
-let zoomedCell = null;    // cell being zoomed
 
 const cv  = document.getElementById('c');
 const ctx = cv.getContext('2d');
@@ -301,12 +300,6 @@ function draw() {
     }
     ctx.fillStyle=letterColor;ctx.fillText(letterToShow,x,y+fs*.04);
     ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-
-    // zoom overlay hint
-    if(zoomedCell&&zoomedCell.id===cell.id){
-      ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#f9e000';ctx.lineWidth=R*.08;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
-    }
   });
 }
 
@@ -341,7 +334,6 @@ function resize(){
 function isBlocked(){
   if(document.getElementById('round-transition')) return true;
   if(document.getElementById('winner-transition')) return true;
-  if(document.getElementById('zoom-overlay')) return true;
   if(document.getElementById('ov-r')?.classList.contains('show')) return true;
   if(document.getElementById('ov-g')?.classList.contains('show')) return true;
   if(document.getElementById('match-summary')?.classList.contains('show')) return true;
@@ -371,45 +363,12 @@ cv.addEventListener('click',e=>{
   const {px,py}=sxy(e),cell=cellAt(px,py);
   if(!cell) return; onCell(cell.id);
 });
-cv.addEventListener('dblclick',e=>{
-  if(isBlocked()) return;
-  const {px,py}=sxy(e),cell=cellAt(px,py);
-  if(!cell) return; showZoom(cell);
-});
 cv.addEventListener('touchend',e=>{
   if(isBlocked()){e.preventDefault();return;}
   e.preventDefault();unlockAudio();
   const {px,py}=sxy(e),cell=cellAt(px,py);
   if(!cell) return; onCell(cell.id);
 },{passive:false});
-
-// ══════════════════════════════════════════════════════
-//  ZOOM OVERLAY
-// ══════════════════════════════════════════════════════
-function showZoom(cell){
-  const old=document.getElementById('zoom-overlay');
-  if(old) old.remove();
-  zoomedCell=cell;draw();
-  const col=cell.owner?teamFill[cell.owner]:'#5b21b6';
-  const bg=cell.owner?darken(teamFill[cell.owner],.4):'#1a0a3a';
-  const el=document.createElement('div');
-  el.id='zoom-overlay';
-  el.innerHTML=`
-    <div class="zoom-card" style="border-color:${col}40">
-      <div class="zoom-letter" style="color:${col};text-shadow:4px 4px 0 ${darken(col,.4)},0 0 40px ${col}88">${cell.letter}</div>
-      <div class="zoom-owner" style="color:${col}">${cell.owner?names[cell.owner]:'غير مُعيَّن'}</div>
-      <button class="zoom-close" onclick="closeZoom()">✕</button>
-    </div>`;
-  el.addEventListener('click',e=>{ if(e.target===el) closeZoom(); });
-  document.body.appendChild(el);
-  requestAnimationFrame(()=>el.classList.add('zoom-visible'));
-}
-function closeZoom(){
-  const el=document.getElementById('zoom-overlay');
-  if(!el) return;
-  el.classList.remove('zoom-visible');
-  setTimeout(()=>{el.remove();zoomedCell=null;draw();},280);
-}
 
 // ══════════════════════════════════════════════════════
 //  GAME LOGIC
@@ -1095,7 +1054,6 @@ function goToMenu(){
   const ms=document.getElementById('match-summary');if(ms)ms.classList.remove('show');
   const wt=document.getElementById('winner-transition');if(wt)wt.remove();
   const rt=document.getElementById('round-transition');if(rt)rt.remove();
-  const zo=document.getElementById('zoom-overlay');if(zo)zo.remove();
   const menuEl=document.getElementById('main-menu');
   const gameEl=document.getElementById('game-screen');
   menuEl.style.display='';menuEl.classList.remove('fade-out');
