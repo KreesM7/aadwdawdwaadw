@@ -2,20 +2,28 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>لعبة الخلية</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 93,27 93,73 50,95 7,73 7,27' fill='%235b1fa0' stroke='%23f9e000' stroke-width='5'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%2300DFFF' font-family='Arial' font-weight='900'>خ</text></svg>"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 93,27 93,73 50,95 7,73 7,27' fill='%235b1fa0' stroke='%23f9e000' stroke-width='4'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%2300DFFF' font-family='Arial' font-weight='900'>خ</text></svg>"/>
 <link rel="stylesheet" href="style.css">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- ═══════════════════ MAIN MENU ═══════════════════ -->
+<!-- ═══════════ MAIN MENU ═══════════ -->
 <div id="main-menu" class="menu-screen">
   <canvas id="menu-canvas"></canvas>
-  <button class="menu-corner-btn" id="menu-theme-btn" onclick="toggleMute()" title="صوت">🔊</button>
 
+  <!-- Top bar -->
+  <div class="menu-topbar">
+    <button class="menu-icon-btn" onclick="toggleMute()" id="menu-mute-btn" title="الصوت">🔊</button>
+    <button class="menu-icon-btn" onclick="openSettings()" title="الإعدادات">⚙️</button>
+  </div>
+
+  <!-- Card -->
   <div class="menu-card" id="menu-card">
+    <!-- Logo -->
     <div class="menu-logo-area">
       <span class="logo-word logo-w1" id="logo-w1">لعبة</span>
       <span class="logo-word logo-w2" id="logo-w2">الخلية</span>
@@ -23,7 +31,6 @@
     </div>
 
     <div class="menu-body">
-
       <!-- Game name -->
       <div class="menu-field">
         <div class="mf-label">اسم اللعبة</div>
@@ -31,86 +38,98 @@
       </div>
 
       <div class="menu-sep"></div>
-      <div class="mf-label">إعدادات الفرق</div>
 
       <!-- Teams -->
       <div class="menu-teams-grid">
+        <!-- Team A -->
         <div class="menu-team-block team-block-a">
           <div class="team-block-hdr">
             <span id="preview-color-g" class="team-preview-dot" style="background:#4ade80"></span>
             <span class="team-block-name">الفريق الأول</span>
-            <span class="team-dir-hint">↕ فوق/تحت</span>
+            <span class="team-dir-hint">↕</span>
           </div>
-          <input class="mf-input mf-input-g" id="menu-name-g" placeholder="الفريق الأول" maxlength="16"/>
-          <div class="color-picker-row">
-            <span class="color-row-lbl">اللون</span>
-            <div class="swatches" id="swatches-g">
-              <button class="sw sw-active" style="background:#4ade80" onclick="pickSwatch('green','#4ade80',this)"></button>
-              <button class="sw" style="background:#22c55e" onclick="pickSwatch('green','#22c55e',this)"></button>
-              <button class="sw" style="background:#86efac" onclick="pickSwatch('green','#86efac',this)"></button>
-              <button class="sw" style="background:#38bdf8" onclick="pickSwatch('green','#38bdf8',this)"></button>
-              <button class="sw" style="background:#818cf8" onclick="pickSwatch('green','#818cf8',this)"></button>
-              <button class="sw" style="background:#f9e000" onclick="pickSwatch('green','#f9e000',this)"></button>
-              <button class="sw" style="background:#f43f5e" onclick="pickSwatch('green','#f43f5e',this)"></button>
-              <button class="sw" style="background:#ffffff" onclick="pickSwatch('green','#ffffff',this)"></button>
-              <label class="sw sw-custom"><input type="color" id="custom-g" value="#4ade80" oninput="pickCustom('green',this.value)"/>✏</label>
-            </div>
+          <input class="mf-input" id="menu-name-g" placeholder="الفريق الأول" maxlength="16"/>
+          <div class="swatches" id="swatches-g">
+            <button class="sw sw-active" style="background:#4ade80" onclick="pickSwatch('green','#4ade80',this)"></button>
+            <button class="sw" style="background:#22c55e" onclick="pickSwatch('green','#22c55e',this)"></button>
+            <button class="sw" style="background:#38bdf8" onclick="pickSwatch('green','#38bdf8',this)"></button>
+            <button class="sw" style="background:#818cf8" onclick="pickSwatch('green','#818cf8',this)"></button>
+            <button class="sw" style="background:#f9e000" onclick="pickSwatch('green','#f9e000',this)"></button>
+            <button class="sw" style="background:#f43f5e" onclick="pickSwatch('green','#f43f5e',this)"></button>
+            <button class="sw" style="background:#ffffff" onclick="pickSwatch('green','#ffffff',this)"></button>
+            <label class="sw sw-custom"><input type="color" id="custom-g" value="#4ade80" oninput="pickCustom('green',this.value)"/>✏</label>
           </div>
         </div>
+
         <div class="teams-vs">VS</div>
+
+        <!-- Team B -->
         <div class="menu-team-block team-block-b">
           <div class="team-block-hdr">
             <span id="preview-color-o" class="team-preview-dot" style="background:#fb923c"></span>
             <span class="team-block-name">الفريق الثاني</span>
-            <span class="team-dir-hint">↔ يسار/يمين</span>
+            <span class="team-dir-hint">↔</span>
           </div>
-          <input class="mf-input mf-input-o" id="menu-name-o" placeholder="الفريق الثاني" maxlength="16"/>
-          <div class="color-picker-row">
-            <span class="color-row-lbl">اللون</span>
-            <div class="swatches" id="swatches-o">
-              <button class="sw sw-active" style="background:#fb923c" onclick="pickSwatch('orange','#fb923c',this)"></button>
-              <button class="sw" style="background:#f97316" onclick="pickSwatch('orange','#f97316',this)"></button>
-              <button class="sw" style="background:#fbbf24" onclick="pickSwatch('orange','#fbbf24',this)"></button>
-              <button class="sw" style="background:#f43f5e" onclick="pickSwatch('orange','#f43f5e',this)"></button>
-              <button class="sw" style="background:#e879f9" onclick="pickSwatch('orange','#e879f9',this)"></button>
-              <button class="sw" style="background:#f9e000" onclick="pickSwatch('orange','#f9e000',this)"></button>
-              <button class="sw" style="background:#a855f7" onclick="pickSwatch('orange','#a855f7',this)"></button>
-              <button class="sw" style="background:#ffffff" onclick="pickSwatch('orange','#ffffff',this)"></button>
-              <label class="sw sw-custom"><input type="color" id="custom-o" value="#fb923c" oninput="pickCustom('orange',this.value)"/>✏</label>
-            </div>
+          <input class="mf-input" id="menu-name-o" placeholder="الفريق الثاني" maxlength="16"/>
+          <div class="swatches" id="swatches-o">
+            <button class="sw sw-active" style="background:#fb923c" onclick="pickSwatch('orange','#fb923c',this)"></button>
+            <button class="sw" style="background:#f97316" onclick="pickSwatch('orange','#f97316',this)"></button>
+            <button class="sw" style="background:#fbbf24" onclick="pickSwatch('orange','#fbbf24',this)"></button>
+            <button class="sw" style="background:#f43f5e" onclick="pickSwatch('orange','#f43f5e',this)"></button>
+            <button class="sw" style="background:#e879f9" onclick="pickSwatch('orange','#e879f9',this)"></button>
+            <button class="sw" style="background:#a855f7" onclick="pickSwatch('orange','#a855f7',this)"></button>
+            <button class="sw" style="background:#ffffff" onclick="pickSwatch('orange','#ffffff',this)"></button>
+            <label class="sw sw-custom"><input type="color" id="custom-o" value="#fb923c" oninput="pickCustom('orange',this.value)"/>✏</label>
           </div>
         </div>
       </div>
 
+      <button class="menu-start-btn" onclick="startGame()">ابدأ اللعبة</button>
+      <div class="menu-version" id="menu-version">v3.0 — لعبة الخلية</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SETTINGS DRAWER ═══════════ -->
+<div id="settings-drawer" class="settings-drawer">
+  <div class="settings-backdrop" onclick="closeSettings()"></div>
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span class="settings-title">⚙️ الإعدادات</span>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+
+      <!-- Player names -->
+      <div class="settings-section">
+        <div class="settings-section-title">👥 أسماء اللاعبين</div>
+        <div class="mf-label">الفريق الأول</div>
+        <input class="mf-input" id="settings-name-g" placeholder="الفريق الأول" maxlength="16"
+               oninput="document.getElementById('menu-name-g').value=this.value"/>
+        <div class="mf-label" style="margin-top:8px">الفريق الثاني</div>
+        <input class="mf-input" id="settings-name-o" placeholder="الفريق الثاني" maxlength="16"
+               oninput="document.getElementById('menu-name-o').value=this.value"/>
+      </div>
+
       <div class="menu-sep"></div>
 
-      <!-- Rounds + Grid size side by side -->
-      <div class="two-pickers-row">
-        <div class="picker-block">
-          <div class="rounds-labels">
-            <span class="rounds-title">جولات للفوز</span>
-            <span class="rounds-sub">المقدّم يختار</span>
-          </div>
+      <!-- Grid size -->
+      <div class="settings-section">
+        <div class="settings-section-title">🔲 حجم الشبكة</div>
+        <div class="grid-preview-row" id="grid-preview-row"></div>
+      </div>
+
+      <div class="menu-sep"></div>
+
+      <!-- Rounds to win -->
+      <div class="settings-section">
+        <div class="settings-section-title">🏆 جولات للفوز</div>
+        <div class="rounds-row">
+          <span class="rounds-sub">المقدّم يختار (1–10)</span>
           <div class="rounds-picker">
             <button class="rounds-btn" onclick="changeRounds(-1)">−</button>
             <span class="rounds-val" id="rounds-to-win">2</span>
             <button class="rounds-btn" onclick="changeRounds(1)">+</button>
-          </div>
-        </div>
-
-        <div class="picker-divider"></div>
-
-        <div class="picker-block">
-          <div class="rounds-labels">
-            <span class="rounds-title">حجم الشبكة</span>
-            <span class="rounds-sub">عدد الخلايا</span>
-          </div>
-          <div class="grid-size-btns" id="grid-size-btns">
-            <button class="gsz-btn" onclick="setGridSize(3,this)">3×3</button>
-            <button class="gsz-btn" onclick="setGridSize(4,this)">4×4</button>
-            <button class="gsz-btn gsz-active" onclick="setGridSize(5,this)">5×5</button>
-            <button class="gsz-btn" onclick="setGridSize(6,this)">6×6</button>
-            <button class="gsz-btn" onclick="setGridSize(7,this)">7×7</button>
           </div>
         </div>
       </div>
@@ -118,108 +137,129 @@
       <div class="menu-sep"></div>
 
       <!-- Custom round names -->
-      <button class="collapsible-btn" onclick="toggleSection('custom-rounds-body','cr-arrow')">
-        <span>أسماء مخصصة للجولات</span>
-        <span class="coll-badge">اختياري</span>
-        <span class="coll-arrow" id="cr-arrow">▼</span>
-      </button>
-      <div class="collapsible-body" id="custom-rounds-body">
-        <div class="cr-grid" id="cr-grid"></div>
+      <div class="settings-section">
+        <button class="collapsible-btn" onclick="toggleSection('custom-rounds-body','cr-arrow')">
+          <span>📝 أسماء مخصصة للجولات</span>
+          <span class="coll-badge">اختياري</span>
+          <span class="coll-arrow" id="cr-arrow">▼</span>
+        </button>
+        <div class="collapsible-body" id="custom-rounds-body">
+          <div class="cr-grid" id="cr-grid"></div>
+        </div>
       </div>
 
       <div class="menu-sep"></div>
 
       <!-- How to play -->
-      <button class="collapsible-btn" onclick="toggleSection('howto-body','howto-arrow')">
-        <span>كيف تلعب؟</span>
-        <span class="coll-arrow" id="howto-arrow">▼</span>
-      </button>
-      <div class="collapsible-body" id="howto-body">
-        <div class="howto-row"><span class="hd green-hd"></span><span>الفريق الأول يوصل من <b>فوق لتحت</b></span></div>
-        <div class="howto-row"><span class="hd orange-hd"></span><span>الفريق الثاني يوصل من <b>يسار ليمين</b></span></div>
-        <div class="howto-row"><span class="hd yellow-hd"></span><span>اضغط الخلية: مرة للأخضر — ثانية للبرتقالي — ثالثة مسح</span></div>
-        <div class="howto-row"><span class="hd purple-hd"></span><span>المقدّم يعطي النقطة لمن أجاب أسرع — لا دور محدد</span></div>
-        <div class="howto-row"><span class="hd yellow-hd"></span><span>أول فريق يفوز بعدد الجولات المحددة يحسم البطولة</span></div>
+      <div class="settings-section">
+        <button class="collapsible-btn" onclick="toggleSection('howto-body','howto-arrow')">
+          <span>❓ كيف تلعب؟</span>
+          <span class="coll-arrow" id="howto-arrow">▼</span>
+        </button>
+        <div class="collapsible-body" id="howto-body">
+          <div class="howto-row"><span class="hd green-hd"></span><span>الفريق الأول يوصل من <b>فوق لتحت</b></span></div>
+          <div class="howto-row"><span class="hd orange-hd"></span><span>الفريق الثاني يوصل من <b>يسار ليمين</b></span></div>
+          <div class="howto-row"><span class="hd yellow-hd"></span><span>اضغط مرة تختار (أصفر) — ثانية أخضر — ثالثة برتقالي — رابعة مسح</span></div>
+          <div class="howto-row"><span class="hd purple-hd"></span><span>المقدّم يعطي النقطة لمن أجاب أسرع</span></div>
+        </div>
       </div>
 
-      <!-- ══ GAME MODES ══ -->
       <div class="menu-sep"></div>
-      <div class="mf-label" style="color:#f9e000;font-size:.78rem;letter-spacing:.5px">⚡ أوضاع اللعبة</div>
 
-      <!-- Powers Mode -->
-      <div class="gamemode-card" id="gm-powers" onclick="togglePowersMode()">
-        <div class="gm-left">
-          <div class="gm-icon">⚡</div>
-          <div class="gm-info">
-            <div class="gm-name">وضع القوى</div>
-            <div class="gm-desc">كل إجابة صحيحة تمنح قوة عشوائية للفريق</div>
+      <!-- Game Modes -->
+      <div class="settings-section">
+        <div class="settings-section-title">⚡ أوضاع اللعبة</div>
+        <div class="gamemode-card" id="gm-powers" onclick="togglePowersMode()">
+          <div class="gm-left">
+            <div class="gm-icon">⚡</div>
+            <div class="gm-info">
+              <div class="gm-name">وضع القوى</div>
+              <div class="gm-desc">كل 3 إجابات صحيحة تمنح قوة عشوائية للفريق</div>
+            </div>
+          </div>
+          <div class="gm-toggle" id="gm-powers-toggle">
+            <div class="gm-toggle-knob"></div>
           </div>
         </div>
-        <div class="gm-toggle" id="gm-powers-toggle">
-          <div class="gm-toggle-knob"></div>
-        </div>
       </div>
 
-      <!-- Start -->
-      <button class="menu-start-btn" onclick="startGame()">ابدأ اللعبة ◄</button>
-      <div class="menu-version" id="menu-version">v3.0 — لعبة الخلية</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════ GAME SCREEN ═══════════════════ -->
+<!-- ═══════════ GAME SCREEN ═══════════ -->
 <div id="game-screen" class="game-screen hidden">
 <div class="card">
   <div class="play" id="play">
     <canvas id="c"></canvas>
     <button class="collapse-btn" id="collapse-btn" onclick="toggleSide()">▶</button>
+    <button class="fs-float-btn" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
   </div>
 
   <div class="side" id="side">
     <div class="side-toolbar">
       <button class="icon-btn" onclick="goToMenu()" title="القائمة">⌂</button>
       <button class="icon-btn" id="mute-btn" onclick="toggleMute()" title="صوت">🔊</button>
-      <button class="icon-btn" id="fs-btn" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
+      <button class="icon-btn" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
     </div>
+
     <div class="tool-row">
-      <button class="tool-btn" id="swap-btn" onclick="swapTeams()" title="تبديل الفرق" style="transition:transform .4s">⇄</button>
-      <button class="tool-btn" id="reveal-btn" onclick="toggleReveal()" title="وضع الكشف">👁</button>
+      <button class="tool-btn" id="swap-btn" onclick="swapTeams()" title="تبديل الفرق">⇄</button>
+      <button class="tool-btn" id="reveal-btn" onclick="toggleReveal()" title="كشف الحروف">👁</button>
       <button class="tool-btn" onclick="undoMove()" title="تراجع">↩</button>
     </div>
-    <!-- block power activation (only visible when block is active) -->
-    <div id="block-bar" style="display:none;width:100%">
+
+    <div id="block-bar" style="display:none;flex-direction:column;gap:4px;width:100%">
       <button class="block-bar-btn" onclick="useBlock('green')">🚫 احجب الأخضر</button>
       <button class="block-bar-btn" onclick="useBlock('orange')">🚫 احجب البرتقالي</button>
     </div>
+
     <div class="side-logo">
       <span class="side-logo-w1">لعبة</span>
       <span class="side-logo-w2" id="game-title-bar">الخلية</span>
     </div>
+
     <div class="round-title">الجولة<br><span class="hi" id="rname">الأولى</span></div>
+
     <div class="score-block">
       <div class="score-row">
-        <div class="score-team"><div class="sn" id="sn-g">الفريق الأول</div><div class="sv score-anim" id="sv-g">0</div></div>
-        <div class="score-center"><div class="score-vs">جولات</div><div class="wins-label">/<span id="wins-needed">2</span></div></div>
-        <div class="score-team"><div class="sn" id="sn-o">الفريق الثاني</div><div class="sv score-anim" id="sv-o">0</div></div>
+        <div class="score-team">
+          <div class="sn" id="sn-g">الفريق الأول</div>
+          <div class="sv score-anim" id="sv-g">0</div>
+        </div>
+        <div class="score-center">
+          <div class="score-vs">جولات</div>
+          <div class="wins-label">/<span id="wins-needed">2</span></div>
+        </div>
+        <div class="score-team">
+          <div class="sn" id="sn-o">الفريق الثاني</div>
+          <div class="sv score-anim" id="sv-o">0</div>
+        </div>
       </div>
       <div class="series-row">
         <span class="series-lbl">سلسلة:</span>
-        <span id="series-g" style="color:#4ade80;font-weight:900">0</span>
+        <span id="series-g" style="color:#4ade80;font-weight:800">0</span>
         <span class="series-dash">—</span>
-        <span id="series-o" style="color:#fb923c;font-weight:900">0</span>
+        <span id="series-o" style="color:#fb923c;font-weight:800">0</span>
       </div>
     </div>
+
     <input class="tin" id="name-g" value="الفريق الأول" placeholder="الفريق الأول" maxlength="16" oninput="syncNames()"/>
     <button class="tbtn" id="btn-g" onclick="pickTeam('green')">
-      <span class="chk" id="chk-g">✓</span><span id="lbl-g">الفريق الأول</span><span class="team-dot-g"></span>
+      <span class="chk" id="chk-g">✓</span>
+      <span id="lbl-g">الفريق الأول</span>
+      <span class="team-dot-g"></span>
     </button>
-    <button class="power-badge" id="power-badge-g" style="display:none;background:rgba(56,189,248,.2);border-color:#38bdf8"></button>
+    <button class="power-badge" id="power-badge-g" style="display:none"></button>
 
     <input class="tin" id="name-o" value="الفريق الثاني" placeholder="الفريق الثاني" maxlength="16" oninput="syncNames()"/>
     <button class="tbtn" id="btn-o" onclick="pickTeam('orange')">
-      <span class="chk" id="chk-o">✓</span><span id="lbl-o">الفريق الثاني</span><span class="team-dot-o"></span>
+      <span class="chk" id="chk-o">✓</span>
+      <span id="lbl-o">الفريق الثاني</span>
+      <span class="team-dot-o"></span>
     </button>
-    <button class="power-badge" id="power-badge-o" style="display:none;background:rgba(56,189,248,.2);border-color:#38bdf8"></button>
+    <button class="power-badge" id="power-badge-o" style="display:none"></button>
+
     <div class="divider"></div>
     <div class="hist-wrap">
       <div class="hist-title">آخر الحركات</div>
@@ -232,6 +272,17 @@
 </div>
 </div>
 
+<!-- Mobile bottom bar -->
+<div class="mobile-bar" id="mobile-bar" style="display:none">
+  <button class="mbtn" id="mbtn-g" onclick="pickTeam('green')"><span id="mlbl-g">الأول</span></button>
+  <div class="mscore">
+    <span id="msv-g" style="color:#4ade80;font-weight:800">0</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.65rem">جولات</span>
+    <span id="msv-o" style="color:#fb923c;font-weight:800">0</span>
+  </div>
+  <button class="mbtn" id="mbtn-o" onclick="pickTeam('orange')"><span id="mlbl-o">الثاني</span></button>
+</div>
+
 <div class="cf-wrap" id="cf"></div>
 
 <div class="ov" id="ov-r">
@@ -239,7 +290,7 @@
     <div class="ov-e" id="ov-r-e"></div>
     <div class="ov-t" id="ov-r-t">فاز الفريق!</div>
     <div class="ov-s" id="ov-r-s"></div>
-    <button class="ov-b" onclick="nextRound()">▶ الجولة التالية</button>
+    <button class="ov-b" onclick="nextRound()">الجولة التالية ←</button>
   </div>
 </div>
 
@@ -261,54 +312,113 @@
 
 <script src="game.js"></script>
 <script>
-function pickSwatch(team,color,btn){
-  document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
-  btn.classList.add('sw-active'); onColorChange(team,color);
+// ── Swatches ──
+function pickSwatch(t,c,btn){
+  document.getElementById('swatches-'+(t==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
+  btn.classList.add('sw-active'); onColorChange(t,c);
 }
-function pickCustom(team,color){
-  document.getElementById('swatches-'+(team==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
-  onColorChange(team,color);
+function pickCustom(t,c){
+  document.getElementById('swatches-'+(t==='green'?'g':'o')).querySelectorAll('.sw').forEach(s=>s.classList.remove('sw-active'));
+  onColorChange(t,c);
 }
-let _roundsVal=2;
+
+// ── Settings drawer ──
+function openSettings(){
+  document.getElementById('settings-drawer').classList.add('settings-open');
+  // sync player name fields
+  document.getElementById('settings-name-g').value=document.getElementById('menu-name-g').value;
+  document.getElementById('settings-name-o').value=document.getElementById('menu-name-o').value;
+}
+function closeSettings(){
+  document.getElementById('settings-drawer').classList.remove('settings-open');
+}
+
+// ── Rounds ──
+var _roundsVal=2;
 function changeRounds(delta){
   _roundsVal=Math.max(1,Math.min(10,_roundsVal+delta));
   document.getElementById('rounds-to-win').textContent=_roundsVal;
   winsToWin=_roundsVal;
   buildCustomRoundInputs();
 }
-function setGridSize(n,btn){
-  document.getElementById('grid-size-btns').querySelectorAll('.gsz-btn').forEach(b=>b.classList.remove('gsz-active'));
-  btn.classList.add('gsz-active');
-  gridSize=n;
+
+// ── Grid previews ──
+var GRID_SIZES=[3,4,5,6,7];
+var _activeGrid=5;
+function buildGridPreviews(){
+  var row=document.getElementById('grid-preview-row');
+  if(!row) return;
+  row.innerHTML='';
+  GRID_SIZES.forEach(function(n){
+    var btn=document.createElement('button');
+    btn.className='grid-preview-btn'+(n===_activeGrid?' gpb-active':'');
+    btn.innerHTML='<canvas class="gpb-canvas" width="68" height="60"></canvas><span class="gpb-label">'+n+'×'+n+'</span>';
+    btn.onclick=function(){ selectGrid(n); };
+    row.appendChild(btn);
+    drawHexPreview(btn.querySelector('.gpb-canvas'),n,n===_activeGrid);
+  });
 }
+function selectGrid(n){
+  _activeGrid=n; gridSize=n; buildGridPreviews();
+}
+function drawHexPreview(canvas,n,active){
+  var c=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  c.clearRect(0,0,W,H);
+  var r=Math.min(W*.65/((n-.5)*Math.sqrt(3)),H*.65/(1.5*(n-1)+2));
+  var DX=Math.sqrt(3)*r,DY=1.5*r;
+  var gx=(W-(n-.5)*DX)/2+DX/2,gy=(H-((n-1)*DY+2*r))/2+r;
+  for(var row=0;row<n;row++){
+    for(var col=0;col<n;col++){
+      var x=gx+col*DX+(row%2===1?DX/2:0),y=gy+row*DY;
+      c.beginPath();
+      for(var i=0;i<6;i++){var a=(Math.PI/3)*i+Math.PI/6;i===0?c.moveTo(x+r*Math.cos(a),y+r*Math.sin(a)):c.lineTo(x+r*Math.cos(a),y+r*Math.sin(a));}
+      c.closePath();
+      c.fillStyle=active?'rgba(168,85,247,0.45)':'rgba(255,255,255,0.1)';c.fill();
+      c.strokeStyle=active?'rgba(216,180,254,0.8)':'rgba(255,255,255,0.2)';c.lineWidth=1;c.stroke();
+    }
+  }
+}
+buildGridPreviews();
+
+// ── Collapsible ──
 function toggleSection(bodyId,arrowId){
-  const body=document.getElementById(bodyId);
-  const arrow=document.getElementById(arrowId);
-  const open=body.classList.toggle('coll-open');
+  var body=document.getElementById(bodyId),arrow=document.getElementById(arrowId);
+  var open=body.classList.toggle('coll-open');
   if(arrow) arrow.textContent=open?'▲':'▼';
 }
+
+// ── Custom round inputs ──
 function buildCustomRoundInputs(){
-  const grid=document.getElementById('cr-grid');
+  var grid=document.getElementById('cr-grid');
   if(!grid) return;
   grid.innerHTML='';
-  const RN=['الأولى','الثانية','الثالثة','الرابعة','الخامسة','السادسة','السابعة','الثامنة','التاسعة','العاشرة'];
-  for(let i=1;i<=_roundsVal;i++){
-    const row=document.createElement('div');row.className='cr-row';
-    row.innerHTML=`<span class="cr-num">جولة ${i}</span><input class="mf-input cr-input" id="custom-round-${i}" placeholder="${RN[i-1]||i}" maxlength="16"/>`;
+  var RN=['الأولى','الثانية','الثالثة','الرابعة','الخامسة','السادسة','السابعة','الثامنة','التاسعة','العاشرة'];
+  for(var i=1;i<=_roundsVal;i++){
+    var row=document.createElement('div');row.className='cr-row';
+    row.innerHTML='<span class="cr-num">جولة '+i+'</span><input class="mf-input cr-input" id="custom-round-'+i+'" placeholder="'+(RN[i-1]||i)+'" maxlength="16"/>';
     grid.appendChild(row);
   }
 }
 buildCustomRoundInputs();
+
+// ── Powers ──
 function togglePowersMode(){
   powersMode=!powersMode;
-  const card=document.getElementById('gm-powers');
-  const tog=document.getElementById('gm-powers-toggle');
-  card.classList.toggle('gm-on',powersMode);
-  tog.classList.toggle('gm-tog-on',powersMode);
+  document.getElementById('gm-powers').classList.toggle('gm-on',powersMode);
+  document.getElementById('gm-powers-toggle').classList.toggle('gm-tog-on',powersMode);
 }
-// keep old names working
-function toggleHowto(){ toggleSection('howto-body','howto-arrow'); }
-function toggleCustomRounds(){ toggleSection('custom-rounds-body','cr-arrow'); }
+
+// ── Mobile bar sync ──
+function syncMobileBar(){
+  var isMobile=window.innerWidth<700;
+  var mb=document.getElementById('mobile-bar');
+  if(mb) mb.style.display=isMobile?'flex':'none';
+  var g=document.getElementById('mlbl-g'),o=document.getElementById('mlbl-o');
+  if(g) g.textContent=names.green;if(o) o.textContent=names.orange;
+  var sg=document.getElementById('msv-g'),so=document.getElementById('msv-o');
+  if(sg) sg.textContent=wins.green;if(so) so.textContent=wins.orange;
+}
+window.addEventListener('resize',syncMobileBar);
 </script>
 </body>
 </html>

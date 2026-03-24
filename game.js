@@ -3,8 +3,12 @@
 // ═══════════════════════════════════════════════════════
 
 const ALL_LETTERS = [...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'];
+// Arabic-indic numerals for extra cells in larger grids (7×7 needs 49, letters=28, so 21 extras)
+const ALL_EXTRAS = ['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢','١٣','١٤','١٥','١٦','١٧','١٨','١٩','٢٠','٢١'];
+// Full unique pool: 28 letters + 21 numerals = 49 (covers up to 7×7 with NO repeats)
+const ALL_CONTENT = [...ALL_LETTERS, ...ALL_EXTRAS];
 var ROWS = 5, COLS = 5;
-var gridSize = 5; // controlled from menu
+var gridSize = 5;
 
 // ── State ──────────────────────────────────────────────
 var cells = [], selId = null, pendingTeam = null, hovId = null;
@@ -13,49 +17,24 @@ var seriesWins = { green: 0, orange: 0 }; // across multiple games (best-of)
 var rNum = 1;
 var winsToWin = 2;
 var roundEnded = false; // prevents duplicate win scoring
-var names  = { green: 'الفريق الأول', orange: 'الفريق الثاني' };
-var teamFill   = { green: '#4ade80', orange: '#fb923c' };
+var claimCount = { green: 0, orange: 0 }; // powers every 3 answers
+var names = { green: 'الفريق الأول', orange: 'الفريق الثاني' };
+var teamFill = { green: '#4ade80', orange: '#fb923c' };
 var teamBorder = { green: '#14532d', orange: '#7c2d12' };
-var teamZone   = { green: '#3dba4e', orange: '#f57c22' };
+var teamZone = { green: '#3dba4e', orange: '#f57c22' };
 var moveHistory = [];
 var moveNum = 0;
 var isDark = true;
 var sideCollapsed = false;
 var isMuted = false;
 var revealMode = false;   // letters hidden until claimed
-var undoStack  = [];      // [{id, prevOwner}]
+var undoStack = [];      // [{id, prevOwner}]
 var roundHistory = [];    // [{rNum, winner, name}] — match summary
 var customRoundNames = []; // set from menu
 
-var cv, ctx;
+const cv  = document.getElementById('c');
+const ctx = cv.getContext('2d');
 var R = 60, GX = 0, GY = 0;
-var _canvasListenersAttached = false;
-function initCanvas() {
-  cv  = document.getElementById('c');
-  ctx = cv ? cv.getContext('2d') : null;
-  if (!cv || _canvasListenersAttached) return;
-  _canvasListenersAttached = true;
-  cv.addEventListener('mousemove',e=>{
-    if(isBlocked()){cv.style.cursor='default';return;}
-    const {px,py}=sxy(e),cell=cellAt(px,py);
-    const nh=cell?cell.id:null;
-    if(nh!==hovId){hovId=nh;draw();}
-    cv.style.cursor=cell?'pointer':'default';
-  });
-  cv.addEventListener('mouseleave',()=>{hovId=null;draw();});
-  cv.addEventListener('click',e=>{
-    if(isBlocked()) return;
-    unlockAudio();
-    const {px,py}=sxy(e),cell=cellAt(px,py);
-    if(!cell) return; onCell(cell.id);
-  });
-  cv.addEventListener('touchend',e=>{
-    if(isBlocked()){e.preventDefault();return;}
-    e.preventDefault();unlockAudio();
-    const {px,py}=sxy(e),cell=cellAt(px,py);
-    if(!cell) return; onCell(cell.id);
-  },{passive:false});
-}
 
 // ══════════════════════════════════════════════════════
 //  THEME
@@ -96,7 +75,7 @@ function applyTeamColors() {
 // ══════════════════════════════════════════════════════
 //  AUDIO
 // ══════════════════════════════════════════════════════
-let ac = null;
+var ac = null;
 function unlockAudio() {
   const Ctor = window.AudioContext || window.webkitAudioContext;
   if (!Ctor) return Promise.resolve(null);
@@ -228,16 +207,15 @@ function cellAt(px,py) {
 // ══════════════════════════════════════════════════════
 function build() {
   const needed = ROWS * COLS;
-  // Repeat letters pool if grid is larger than available letters (e.g. 6×6=36, 7×7=49)
-  let base = [...ALL_LETTERS];
-  while (base.length < needed) base = [...base, ...ALL_LETTERS];
-  const pool = base.sort(()=>Math.random()-.5).slice(0, needed);
+  // Shuffle unique pool — ALL_CONTENT has 49 items, enough for 7×7
+  const pool = [...ALL_CONTENT].sort(()=>Math.random()-.5).slice(0, needed);
   pool.sort(()=>Math.random()-.5);
-  cells=[];let i=0;
+  cells=[]; let i=0;
   for(let r=0;r<ROWS;r++)
     for(let c=0;c<COLS;c++)
-      cells.push({id:`${r}_${c}`,row:r,col:c,letter:pool[i++],owner:null,revealed:!revealMode});
+      cells.push({id:`${r}_${c}`,row:r,col:c,letter:pool[i],cellIndex:i+1,owner:null,revealed:!revealMode}), i++;
   moveHistory=[];moveNum=0;undoStack=[];roundEnded=false;selId=null;
+  claimCount={green:0,orange:0};
   if(powersMode) resetPowers();
   setTimeout(()=>renderHistory(),0);
 }
@@ -246,7 +224,6 @@ function build() {
 //  BACKGROUND (purple hex grid + team zones)
 // ══════════════════════════════════════════════════════
 function drawBackground() {
-  if(!ctx||!cv) return;
   const W=cv.width,H=cv.height;
   const P=(r,c)=>pointyCorners(cxy(r,c).x,cxy(r,c).y,R);
   const grad=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,Math.max(W,H)*.8);
@@ -280,74 +257,87 @@ function drawBackground() {
 //  DRAW
 // ══════════════════════════════════════════════════════
 function draw() {
-  if(!ctx||!cv) return;
   ctx.clearRect(0,0,cv.width,cv.height);
   drawBackground();
   cells.forEach(cell=>{
     const {x,y}=cxy(cell.row,cell.col);
-    const isSel = selId === cell.id;
-    const isHov = hovId === cell.id;
-    const BORDER=R*0.13;
-    // hover preview
+    const isSel=selId===cell.id, isHov=hovId===cell.id;
+    const BORDER=R*0.10; // softer border
     const nextStep=!pendingTeam&&isHov?(
         (!cell.owner&&!isSel)?'select'
       :(isSel&&!cell.owner)?'green'
       :cell.owner==='green'?'orange'
       :cell.owner==='orange'?'clear':null):null;
-    // outer border
+
+    // ── Outer hex (subtle shadow ring) ──
     const outerC=pointyCorners(x,y,R);
     ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-    ctx.fillStyle=cell.owner==='green'?teamBorder.green:cell.owner==='orange'?teamBorder.orange:isSel?'#92400e':'#4c1d95';
+    // owned: team dark color | selected: amber | default: dark purple
+    ctx.fillStyle=cell.owner==='green'?darken(teamFill.green,.45)
+                 :cell.owner==='orange'?darken(teamFill.orange,.45)
+                 :isSel?'#78350f':'#2e1065';
     ctx.fill();
-    // inner fill
+
+    // ── Inner fill ──
     const innerC=pointyCorners(x,y,R-BORDER);
     ctx.beginPath();ctx.moveTo(...innerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...innerC[i]);ctx.closePath();
     let fill;
     if(cell.owner==='green') fill=teamFill.green;
     else if(cell.owner==='orange') fill=teamFill.orange;
-    else if(isSel) fill='#fde047';                          // ← yellow selected
-    else if(pendingTeam&&isHov) fill=pendingTeam==='green'?lighten(teamFill.green,.6):lighten(teamFill.orange,.6);
-    else if(nextStep==='select') fill='#fffbeb';
-    else if(nextStep==='green') fill=lighten(teamFill.green,.6);
-    else if(nextStep==='orange') fill=lighten(teamFill.orange,.6);
-    else if(nextStep==='clear') fill='#ffe4e4';
-    else fill='#ffffff';
-    ctx.fillStyle=fill;ctx.fill();
-    // shield glow
+    else if(isSel) fill='#fde047';
+    else if(pendingTeam&&isHov) fill=lighten(pendingTeam==='green'?teamFill.green:teamFill.orange,.55);
+    else if(nextStep==='select') fill='#fef9c3';
+    else if(nextStep==='green') fill=lighten(teamFill.green,.55);
+    else if(nextStep==='orange') fill=lighten(teamFill.orange,.55);
+    else if(nextStep==='clear') fill='#fee2e2';
+    else fill='#f5f3ff';
+    ctx.fillStyle=fill; ctx.fill();
+
+    // ── Shield glow ──
     if(shieldedCells.has(cell.id)){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.07;ctx.globalAlpha=.8+.2*Math.sin(Date.now()*.005);ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.05;ctx.globalAlpha=.75;ctx.stroke();ctx.globalAlpha=1;
     }
-    // hover ring + dot
+
+    // ── Hover ring ──
     if(nextStep&&!pendingTeam){
       const dc=nextStep==='select'?'#fde047':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'#ef4444';
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle=dc;ctx.lineWidth=R*.06;ctx.globalAlpha=.55;ctx.stroke();ctx.globalAlpha=1;
-      ctx.beginPath();ctx.arc(x+R*.5,y-R*.55,R*.13+1.5,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
-      ctx.beginPath();ctx.arc(x+R*.5,y-R*.55,R*.13,0,Math.PI*2);ctx.fillStyle=dc;ctx.fill();
+      ctx.strokeStyle=dc;ctx.lineWidth=R*.05;ctx.globalAlpha=.5;ctx.stroke();ctx.globalAlpha=1;
     }
-    // selected yellow pulse ring
+
+    // ── Selected yellow ring ──
     if(isSel){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#fde047';ctx.lineWidth=R*.07;ctx.globalAlpha=.8;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle='#fde047';ctx.lineWidth=R*.05;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
     }
-    // reveal mode — show ? if not revealed and not owned
-    const showQuestion = revealMode && !cell.revealed && !cell.owner;
-    const letterToShow = showQuestion ? '؟' : cell.letter;
-    const letterColor  = showQuestion ? 'rgba(255,255,255,0.35)' : (cell.owner?'#ffffff':'#5b21b6');
-    const outlineColor = showQuestion ? 'transparent' : (cell.owner?teamBorder[cell.owner]:'#ffffff');
-    // letter
+
+    // ── Letter (clean, no harsh strokes) ──
+    const showQuestion=revealMode&&!cell.revealed&&!cell.owner;
+    const letter=showQuestion?'؟':cell.letter;
     const fs=Math.round(R*.52);
-    ctx.font=`900 ${fs}px Cairo,sans-serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    if(!showQuestion){
-      ctx.lineWidth=cell.owner?R*.09:R*.07;
-      ctx.strokeStyle=outlineColor;ctx.lineJoin='round';
-      ctx.strokeText(letterToShow,x,y+fs*.04);
+    ctx.font=`800 ${fs}px Tajawal,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+
+    if(cell.owner){
+      // owned: white letter, subtle dark shadow for depth
+      ctx.fillStyle='#ffffff';
+      ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
+      ctx.fillText(letter,x,y+fs*.04);
+      ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+    } else if(isSel){
+      // selected: deep purple on yellow
+      ctx.fillStyle='#1e0550';
+      ctx.fillText(letter,x,y+fs*.04);
+    } else if(showQuestion){
+      ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.fillText(letter,x,y+fs*.04);
+    } else {
+      // unowned: dark purple on light fill
+      ctx.fillStyle='#2e1065';
+      ctx.fillText(letter,x,y+fs*.04);
     }
-    ctx.fillStyle=letterColor;ctx.fillText(letterToShow,x,y+fs*.04);
-    ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
   });
 }
 
@@ -365,7 +355,6 @@ function darken(hex,amt){
 //  RESIZE
 // ══════════════════════════════════════════════════════
 function resize(){
-  if(!cv) return;
   const el=document.getElementById('play');
   const W=el.clientWidth,H=el.clientHeight;
   cv.width=W;cv.height=H;
@@ -398,7 +387,26 @@ function sxy(e){
   const src=e.touches?e.changedTouches[0]:e;
   return {px:(src.clientX-rect.left)*sx,py:(src.clientY-rect.top)*sy};
 }
-
+cv.addEventListener('mousemove',e=>{
+  if(isBlocked()){cv.style.cursor='default';return;}
+  const {px,py}=sxy(e),cell=cellAt(px,py);
+  const nh=cell?cell.id:null;
+  if(nh!==hovId){hovId=nh;draw();}
+  cv.style.cursor=cell?'pointer':'default';
+});
+cv.addEventListener('mouseleave',()=>{hovId=null;draw();});
+cv.addEventListener('click',e=>{
+  if(isBlocked()) return;
+  unlockAudio();
+  const {px,py}=sxy(e),cell=cellAt(px,py);
+  if(!cell) return; onCell(cell.id);
+});
+cv.addEventListener('touchend',e=>{
+  if(isBlocked()){e.preventDefault();return;}
+  e.preventDefault();unlockAudio();
+  const {px,py}=sxy(e),cell=cellAt(px,py);
+  if(!cell) return; onCell(cell.id);
+},{passive:false});
 
 // ══════════════════════════════════════════════════════
 //  GAME LOGIC
@@ -461,7 +469,10 @@ function doAssign(id,team){
     moveNum++;
     moveHistory.unshift({team,letter:cell.letter,num:moveNum,action:'claim'});
     if(moveHistory.length>8) moveHistory.pop();
-    if(powersMode && !roundEnded) setTimeout(()=>triggerPowerSpin(team), 420);
+    if(powersMode && !roundEnded){
+      claimCount[team]++;
+      if(claimCount[team] % 3 === 0) setTimeout(()=>triggerPowerSpin(team), 420);
+    }
   } else if(wasOwned!==team){
     moveHistory.unshift({team,letter:cell.letter,num:'↺',action:'change',from:wasOwned});
     if(moveHistory.length>8) moveHistory.pop();
@@ -537,17 +548,48 @@ function toggleReveal(){
 
 // ── FULLSCREEN ──
 function toggleFullscreen(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().catch(()=>{});
+  if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+    const el=document.documentElement;
+    (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen)?.call(el);
   } else {
-    document.exitFullscreen().catch(()=>{});
+    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen)?.call(document);
   }
 }
-document.addEventListener('fullscreenchange',()=>{
-  const btn=document.getElementById('fs-btn');
-  if(btn) btn.textContent=document.fullscreenElement?'⛶':'⛶';
+function onFullscreenChange(){
+  const isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  ['fs-btn','fs-float-btn'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b) b.textContent=isFs?'⛶':'⛶';
+  });
   resize();
-});
+}
+document.addEventListener('fullscreenchange',onFullscreenChange);
+document.addEventListener('webkitfullscreenchange',onFullscreenChange);
+
+// ── RESPONSIVE LAYOUT ──
+function applyLayout(){
+  const W=window.innerWidth, H=window.innerHeight;
+  const isMobile=W<700;
+  const isTV=W>=1800;
+  const gameEl=document.getElementById('game-screen');
+  const side=document.getElementById('side');
+  const mb=document.getElementById('mobile-bar');
+
+  if(gameEl){
+    if(isMobile){
+      // On mobile: stack vertically, hide side panel, show bottom bar
+      if(side){ side.style.display='none'; }
+      if(mb){ mb.style.display='flex'; }
+    } else {
+      if(side){ side.style.display=''; }
+      if(mb){ mb.style.display='none'; }
+    }
+  }
+  syncMobileBar();
+  resize();
+}
+window.addEventListener('resize',applyLayout);
+window.addEventListener('orientationchange',()=>setTimeout(applyLayout,200));
 
 // ══════════════════════════════════════════════════════
 //  HISTORY
@@ -607,8 +649,8 @@ function updateScore(){
   });
   const wEl=document.getElementById('wins-needed');
   if(wEl) wEl.textContent=winsToWin;
-  // series wins
-  const sg=document.getElementById('series-g'),so=document.getElementById('series-o');
+  // sync mobile bar
+  if(typeof syncMobileBar==='function') syncMobileBar();
   if(sg) sg.textContent=seriesWins.green;
   if(so) so.textContent=seriesWins.orange;
 }
@@ -841,7 +883,7 @@ function showRoundTransition(roundName,onDone){
       const la=ease*(t<PHASE_IN+PHASE_HOLD?1:Math.max(0,1-(t-PHASE_IN-PHASE_HOLD)/PHASE_OUT));
       c.save();c.globalAlpha=la;
       const fs1=Math.min(W*.1,80);
-      c.font=`900 ${fs1}px Cairo,sans-serif`;
+      c.font=`800 ${fs1}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
       // shadow layers
       c.fillStyle='#7a5c00';
@@ -866,7 +908,7 @@ function showRoundTransition(roundName,onDone){
       c.globalAlpha=na;
       c.translate(W*.5,H*.62);c.scale(sc,sc);
       const fs2=Math.min(W*.18,130);
-      c.font=`900 ${fs2}px Cairo,sans-serif`;
+      c.font=`800 ${fs2}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
       // 3D shadow stack
       c.fillStyle='#7c0000';
@@ -966,7 +1008,7 @@ showGameWin=function(team){ showWinnerTransition(team,()=>_origShowGameWin(team)
 // ══════════════════════════════════════════════════════
 //  MENU BACKGROUND
 // ══════════════════════════════════════════════════════
-let menuAnimId=null,howtoOpen=false;
+var menuAnimId=null,howtoOpen=false;
 
 function initMenuCanvas(){
   const mc=document.getElementById('menu-canvas');
@@ -1081,17 +1123,14 @@ function startGame(){
   document.title=gameName;
   const menuEl=document.getElementById('main-menu');
   const gameEl=document.getElementById('game-screen');
-  // MUST remove 'hidden' (display:none) BEFORE initCanvas so getElementById('c') works
-  gameEl.classList.remove('hidden');
-  gameEl.offsetHeight; // force reflow
-  gameEl.classList.add('visible');
-  initCanvas(); // canvas is now in the DOM and visible
+  gameEl.classList.remove('hidden');gameEl.offsetHeight;gameEl.classList.add('visible');
   menuEl.classList.add('fade-out');
   setTimeout(()=>{menuEl.style.display='none';stopMenuCanvas();},500);
   syncNames();build();applyTheme();renderHistory();
   window.addEventListener('resize',resize);
-  document.fonts.ready.then(()=>resize());
-  resize();updateScore();
+  document.fonts.ready.then(()=>{ resize(); if(typeof applyLayout==='function') applyLayout(); });
+  resize(); updateScore();
+  if(typeof applyLayout==='function') applyLayout();
   setTimeout(()=>showRoundTransition(getRoundName(1),()=>{}),600);
 }
 
@@ -1121,7 +1160,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ══════════════════════════════════════════════════════
 
 var powersMode = false;
-var heldPowers  = { green: null, orange: null };
+var heldPowers = { green: null, orange: null };
 var shieldedCells = new Set();
 var blockedTeam = null; // team whose NEXT correct answer is blocked by presenter
 var powerPickMode = null;
@@ -1211,23 +1250,25 @@ function showPowerSpin(team, power) {
     });
   } catch(e){} }));
 
-  // Animate the reel with CSS transition
+  // Animate the reel with CSS transition — 5 copies for smooth spin
   const reel = el.querySelector('#ps-reel');
-  // Start a bit above so it scrolls INTO view
-  const startOffset = -(POWERS.length * 0.5) * ITEM_H;
-  const endOffset   = -(landIndex * ITEM_H) + ITEM_H; // center the item in the window
+  const ITEM_H = 56;
+  // We want to land with targetIdx item centered in the 56px window
+  // Start at top of first copy, end at middle copy + target
+  const startY = 0;
+  // endY: negative to scroll down, center item = -targetIdx*ITEM_H + (window_h/2 - ITEM_H/2) but window clips so just center row
+  const endY = -(POWERS.length + targetIdx) * ITEM_H;
 
-  reel.style.transform = `translateY(${startOffset}px)`;
   reel.style.transition = 'none';
+  reel.style.transform = `translateY(0)`;
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      reel.style.transition = `transform 1.8s cubic-bezier(.15,.85,.25,1)`;
-      reel.style.transform  = `translateY(${endOffset}px)`;
-    });
-  });
+  // Double RAF to ensure transition:none is applied before we set the animation
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    reel.style.transition = 'transform 1.6s cubic-bezier(.08,.82,.17,1)';
+    reel.style.transform = `translateY(${endY}px)`;
+  }));
 
-  setTimeout(() => revealPower(el, power), 2000);
+  setTimeout(() => revealPower(el, power), 1800);
 }
 
 function revealPower(el, power) {
@@ -1553,6 +1594,7 @@ function activatePower(team, powerId, fromSave) {
 }
 
 // ── Power pick mode: next cell click is intercepted ──
+// powerPickMode already declared above // {team, type, count, beneficiary}
 function setPowerPickMode(targetTeam, type, count = 1, beneficiary = null) {
   powerPickMode = { targetTeam, type, count, remaining: count, beneficiary };
   showPowerToast(count > 1 ? `انقر على ${count} خلايا` : `انقر على خلية`, 8000);
