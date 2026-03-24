@@ -27,9 +27,35 @@ var undoStack  = [];      // [{id, prevOwner}]
 var roundHistory = [];    // [{rNum, winner, name}] — match summary
 var customRoundNames = []; // set from menu
 
-const cv  = document.getElementById('c');
-const ctx = cv.getContext('2d');
-let R = 60, GX = 0, GY = 0;
+var cv, ctx;
+var R = 60, GX = 0, GY = 0;
+var _canvasListenersAttached = false;
+function initCanvas() {
+  cv  = document.getElementById('c');
+  ctx = cv ? cv.getContext('2d') : null;
+  if (!cv || _canvasListenersAttached) return;
+  _canvasListenersAttached = true;
+  cv.addEventListener('mousemove',e=>{
+    if(isBlocked()){cv.style.cursor='default';return;}
+    const {px,py}=sxy(e),cell=cellAt(px,py);
+    const nh=cell?cell.id:null;
+    if(nh!==hovId){hovId=nh;draw();}
+    cv.style.cursor=cell?'pointer':'default';
+  });
+  cv.addEventListener('mouseleave',()=>{hovId=null;draw();});
+  cv.addEventListener('click',e=>{
+    if(isBlocked()) return;
+    unlockAudio();
+    const {px,py}=sxy(e),cell=cellAt(px,py);
+    if(!cell) return; onCell(cell.id);
+  });
+  cv.addEventListener('touchend',e=>{
+    if(isBlocked()){e.preventDefault();return;}
+    e.preventDefault();unlockAudio();
+    const {px,py}=sxy(e),cell=cellAt(px,py);
+    if(!cell) return; onCell(cell.id);
+  },{passive:false});
+}
 
 // ══════════════════════════════════════════════════════
 //  THEME
@@ -220,6 +246,7 @@ function build() {
 //  BACKGROUND (purple hex grid + team zones)
 // ══════════════════════════════════════════════════════
 function drawBackground() {
+  if(!ctx||!cv) return;
   const W=cv.width,H=cv.height;
   const P=(r,c)=>pointyCorners(cxy(r,c).x,cxy(r,c).y,R);
   const grad=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,Math.max(W,H)*.8);
@@ -253,6 +280,7 @@ function drawBackground() {
 //  DRAW
 // ══════════════════════════════════════════════════════
 function draw() {
+  if(!ctx||!cv) return;
   ctx.clearRect(0,0,cv.width,cv.height);
   drawBackground();
   cells.forEach(cell=>{
@@ -337,6 +365,7 @@ function darken(hex,amt){
 //  RESIZE
 // ══════════════════════════════════════════════════════
 function resize(){
+  if(!cv) return;
   const el=document.getElementById('play');
   const W=el.clientWidth,H=el.clientHeight;
   cv.width=W;cv.height=H;
@@ -369,26 +398,7 @@ function sxy(e){
   const src=e.touches?e.changedTouches[0]:e;
   return {px:(src.clientX-rect.left)*sx,py:(src.clientY-rect.top)*sy};
 }
-cv.addEventListener('mousemove',e=>{
-  if(isBlocked()){cv.style.cursor='default';return;}
-  const {px,py}=sxy(e),cell=cellAt(px,py);
-  const nh=cell?cell.id:null;
-  if(nh!==hovId){hovId=nh;draw();}
-  cv.style.cursor=cell?'pointer':'default';
-});
-cv.addEventListener('mouseleave',()=>{hovId=null;draw();});
-cv.addEventListener('click',e=>{
-  if(isBlocked()) return;
-  unlockAudio();
-  const {px,py}=sxy(e),cell=cellAt(px,py);
-  if(!cell) return; onCell(cell.id);
-});
-cv.addEventListener('touchend',e=>{
-  if(isBlocked()){e.preventDefault();return;}
-  e.preventDefault();unlockAudio();
-  const {px,py}=sxy(e),cell=cellAt(px,py);
-  if(!cell) return; onCell(cell.id);
-},{passive:false});
+
 
 // ══════════════════════════════════════════════════════
 //  GAME LOGIC
@@ -1051,6 +1061,7 @@ function onColorChange(team,hex){
 // ══════════════════════════════════════════════════════
 function startGame(){
   unlockAudio();
+  initCanvas();
   // Apply grid size
   ROWS = gridSize; COLS = gridSize;
   const gName=document.getElementById('menu-name-g').value.trim()||'الفريق الأول';
@@ -1539,7 +1550,6 @@ function activatePower(team, powerId, fromSave) {
 }
 
 // ── Power pick mode: next cell click is intercepted ──
-let powerPickMode = null; // {team, type, count, beneficiary}
 function setPowerPickMode(targetTeam, type, count = 1, beneficiary = null) {
   powerPickMode = { targetTeam, type, count, remaining: count, beneficiary };
   showPowerToast(count > 1 ? `انقر على ${count} خلايا` : `انقر على خلية`, 8000);
