@@ -3,10 +3,8 @@
 // ═══════════════════════════════════════════════════════
 
 const ALL_LETTERS = [...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'];
-// Arabic-indic numerals for extra cells in larger grids (7×7 needs 49, letters=28, so 21 extras)
-const ALL_EXTRAS = ['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢','١٣','١٤','١٥','١٦','١٧','١٨','١٩','٢٠','٢١'];
-// Full unique pool: 28 letters + 21 numerals = 49 (covers up to 7×7 with NO repeats)
-const ALL_CONTENT = [...ALL_LETTERS, ...ALL_EXTRAS];
+// Full pool: letters only — repeat to cover up to 7×7 (49 cells)
+const ALL_CONTENT = [...ALL_LETTERS, ...ALL_LETTERS].slice(0, 49);
 var ROWS = 5, COLS = 5;
 var gridSize = 5;
 
@@ -269,74 +267,87 @@ function draw() {
       :cell.owner==='green'?'orange'
       :cell.owner==='orange'?'clear':null):null;
 
-    // ── Outer hex (subtle shadow ring) ──
+    // ── Outer shadow ring ──
     const outerC=pointyCorners(x,y,R);
     ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-    // owned: team dark color | selected: amber | default: dark purple
-    ctx.fillStyle=cell.owner==='green'?darken(teamFill.green,.45)
-                 :cell.owner==='orange'?darken(teamFill.orange,.45)
-                 :isSel?'#78350f':'#2e1065';
+    if(cell.owner==='green')      ctx.fillStyle=darken(teamFill.green,.38);
+    else if(cell.owner==='orange') ctx.fillStyle=darken(teamFill.orange,.38);
+    else if(isSel)                 ctx.fillStyle='#3b0f6e';
+    else                           ctx.fillStyle='#1a0840';
     ctx.fill();
 
     // ── Inner fill ──
     const innerC=pointyCorners(x,y,R-BORDER);
     ctx.beginPath();ctx.moveTo(...innerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...innerC[i]);ctx.closePath();
     let fill;
-    if(cell.owner==='green') fill=teamFill.green;
+    if(cell.owner==='green')       fill=teamFill.green;
     else if(cell.owner==='orange') fill=teamFill.orange;
-    else if(isSel) fill='#fde047';
-    else if(pendingTeam&&isHov) fill=lighten(pendingTeam==='green'?teamFill.green:teamFill.orange,.55);
-    else if(nextStep==='select') fill='#fef9c3';
-    else if(nextStep==='green') fill=lighten(teamFill.green,.55);
-    else if(nextStep==='orange') fill=lighten(teamFill.orange,.55);
-    else if(nextStep==='clear') fill='#fee2e2';
-    else fill='#f5f3ff';
+    else if(isSel)                 fill='#6d28d9';   // deep purple when selected
+    else if(pendingTeam&&isHov)    fill=lighten(pendingTeam==='green'?teamFill.green:teamFill.orange,.3);
+    else if(nextStep==='select')   fill='#5b21b6';
+    else if(nextStep==='green')    fill=lighten(teamFill.green,.25);
+    else if(nextStep==='orange')   fill=lighten(teamFill.orange,.25);
+    else if(nextStep==='clear')    fill='#4c1d95';
+    else                           fill='#3b1278';   // default unowned: rich purple
     ctx.fillStyle=fill; ctx.fill();
+
+    // ── Subtle inner bevel (top highlight) ──
+    if(!cell.owner&&!isSel){
+      const bevelC=pointyCorners(x,y,R-BORDER*1.5);
+      ctx.beginPath();ctx.moveTo(...bevelC[0]);for(let i=1;i<3;i++)ctx.lineTo(...bevelC[i]);
+      ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1.2;ctx.stroke();
+    }
 
     // ── Shield glow ──
     if(shieldedCells.has(cell.id)){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.05;ctx.globalAlpha=.75;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.06;ctx.globalAlpha=.8;ctx.stroke();ctx.globalAlpha=1;
     }
 
     // ── Hover ring ──
     if(nextStep&&!pendingTeam){
-      const dc=nextStep==='select'?'#fde047':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'#ef4444';
+      const dc=nextStep==='select'?'rgba(168,85,247,.9)':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'rgba(239,68,68,.8)';
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle=dc;ctx.lineWidth=R*.05;ctx.globalAlpha=.5;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle=dc;ctx.lineWidth=R*.055;ctx.globalAlpha=.65;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Selected yellow ring ──
+    // ── Selected glow ring ──
     if(isSel){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#fde047';ctx.lineWidth=R*.05;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle='#c084fc';ctx.lineWidth=R*.06;ctx.globalAlpha=.9;ctx.stroke();ctx.globalAlpha=1;
+      // outer soft glow
+      ctx.beginPath();ctx.moveTo(...pointyCorners(x,y,R+R*.04)[0]);
+      pointyCorners(x,y,R+R*.04).forEach((pt,i)=>{if(i>0)ctx.lineTo(...pt);});
+      ctx.closePath();
+      ctx.strokeStyle='rgba(192,132,252,.25)';ctx.lineWidth=R*.1;ctx.stroke();
     }
 
-    // ── Letter (clean, no harsh strokes) ──
+    // ── Letter — hidden when selected, shown otherwise ──
     const showQuestion=revealMode&&!cell.revealed&&!cell.owner;
     const letter=showQuestion?'؟':cell.letter;
     const fs=Math.round(R*.52);
     ctx.font=`800 ${fs}px Tajawal,sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+    ctx.shadowBlur=0; ctx.shadowColor='transparent'; ctx.shadowOffsetY=0;
 
-    if(cell.owner){
-      // owned: white letter, subtle dark shadow for depth
-      ctx.fillStyle='#ffffff';
-      ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
+    if(isSel){
+      // SELECTED: hide the letter — just show the filled hex
+      // (no text drawn)
+    } else if(cell.owner){
+      // Owned: bright white letter with soft shadow
+      ctx.fillStyle='rgba(255,255,255,.95)';
+      ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=4; ctx.shadowOffsetY=1;
       ctx.fillText(letter,x,y+fs*.04);
-      ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
-    } else if(isSel){
-      // selected: deep purple on yellow
-      ctx.fillStyle='#1e0550';
-      ctx.fillText(letter,x,y+fs*.04);
+      ctx.shadowBlur=0; ctx.shadowOffsetY=0;
     } else if(showQuestion){
-      ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.fillStyle='rgba(255,255,255,.3)';
       ctx.fillText(letter,x,y+fs*.04);
     } else {
-      // unowned: dark purple on light fill
-      ctx.fillStyle='#2e1065';
+      // Unowned: soft white letter on dark purple hex
+      ctx.fillStyle='rgba(220,200,255,.85)';
+      ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=2;
       ctx.fillText(letter,x,y+fs*.04);
+      ctx.shadowBlur=0;
     }
   });
 }
@@ -813,14 +824,14 @@ function showRoundTransition(roundName,onDone){
   } catch(e){} }));
 
   // ── animated hex particles ──
-  const hexParts=Array.from({length:28},(_,i)=>({
+  const hexParts=Array.from({length:22},(_,i)=>({
     x:Math.random()*W, y:Math.random()*H,
-    r:20+Math.random()*50,
-    rot:Math.random()*Math.PI*2, rotV:(Math.random()-.5)*.04,
-    vx:(Math.random()-.5)*3, vy:-2-Math.random()*4,
+    r:18+Math.random()*44,
+    rot:Math.random()*Math.PI*2, rotV:(Math.random()-.5)*.03,
+    vx:(Math.random()-.5)*2, vy:-1.5-Math.random()*3,
     alpha:0, life:0,
-    delay:Math.random()*.6,
-    color:[teamFill.green,teamFill.orange,'#f9e000','rgba(255,255,255,0.6)'][i%4]
+    delay:Math.random()*.5,
+    color:['rgba(168,85,247,0.9)','rgba(139,92,246,0.9)','rgba(196,148,255,0.7)','rgba(255,255,255,0.35)','rgba(109,40,217,0.8)'][i%5]
   }));
 
   let startT=null,phase='in'; // phases: in / hold / out
@@ -880,23 +891,24 @@ function showRoundTransition(roundName,onDone){
     if(t>PHASE_IN*.3){
       const lp=Math.min(1,(t-PHASE_IN*.3)/(PHASE_IN*.5));
       const ease=lp<.5?2*lp*lp:(4-2*lp)*lp-1;
-      const lx=W*.5+80*(1-ease);
-      const ly=H*.38;
+      const lx=W*.5;
+      const ly=H*.36;
       const la=ease*(t<PHASE_IN+PHASE_HOLD?1:Math.max(0,1-(t-PHASE_IN-PHASE_HOLD)/PHASE_OUT));
+      const slideY=30*(1-ease);
       c.save();c.globalAlpha=la;
-      const fs1=Math.min(W*.1,80);
+      c.translate(lx,ly+slideY);
+      const fs1=Math.min(W*.09,72);
       c.font=`800 ${fs1}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
-      // shadow layers
-      c.fillStyle='#7a5c00';
-      for(let s=6;s>=1;s--) c.fillText('الجولة',lx+s*1.5,ly+s*2);
-      // gradient fill
-      const gL=c.createLinearGradient(lx-200,ly-40,lx+200,ly+40);
-      gL.addColorStop(0,'#ffe566');gL.addColorStop(.5,'#ffffff');gL.addColorStop(1,'#ffd600');
-      c.fillStyle=gL;c.fillText('الجولة',lx,ly);
-      // outline
-      c.strokeStyle='rgba(255,255,255,.3)';c.lineWidth=3;c.lineJoin='round';
-      c.strokeText('الجولة',lx,ly);
+      // soft shadow
+      c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=18;c.shadowOffsetY=4;
+      c.fillStyle='rgba(255,255,255,.9)';
+      c.fillText('الجولة',0,0);
+      c.shadowBlur=0;c.shadowOffsetY=0;
+      // subtle purple underline
+      const tw=c.measureText('الجولة').width;
+      c.strokeStyle='rgba(192,132,252,.5)';c.lineWidth=2;
+      c.beginPath();c.moveTo(-tw*.4,fs1*.55);c.lineTo(tw*.4,fs1*.55);c.stroke();
       c.restore();
     }
 
@@ -904,39 +916,39 @@ function showRoundTransition(roundName,onDone){
     if(t>PHASE_IN*.55){
       const np=Math.min(1,(t-PHASE_IN*.55)/(PHASE_IN*.5));
       const ease=np<.5?4*np*np*np:(np-1)*(2*np-2)*(2*np-2)+1;
-      const sc=.4+ease*.6+Math.sin(Math.max(0,t-PHASE_IN*.8)*6)*(.08*(1-ease));
+      const sc=.5+ease*.5+Math.sin(Math.max(0,t-PHASE_IN*.8)*5)*(.04*(1-ease));
       const na=ease*(t<PHASE_IN+PHASE_HOLD?1:Math.max(0,1-(t-PHASE_IN-PHASE_HOLD)/PHASE_OUT));
       c.save();
       c.globalAlpha=na;
       c.translate(W*.5,H*.62);c.scale(sc,sc);
-      const fs2=Math.min(W*.18,130);
-      c.font=`800 ${fs2}px Tajawal,sans-serif`;
+      const fs2=Math.min(W*.16,120);
+      c.font=`900 ${fs2}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
-      // 3D shadow stack
-      c.fillStyle='#7c0000';
-      for(let s=10;s>=1;s--) c.fillText(roundName,s*1.8,s*2.2);
-      // cyan gradient
-      const gN=c.createLinearGradient(0,-fs2*.6,0,fs2*.6);
-      gN.addColorStop(0,'#7efeff');gN.addColorStop(.45,'#00dfff');gN.addColorStop(1,'#0077b6');
+      // glow halo
+      c.shadowColor='#c084fc';c.shadowBlur=55;
+      c.fillStyle='rgba(192,132,252,.18)';c.fillText(roundName,0,0);
+      c.shadowBlur=0;
+      // hard shadow
+      c.fillStyle='rgba(30,5,80,.7)';
+      for(let s=5;s>=1;s--) c.fillText(roundName,s*1.2,s*1.5);
+      // main gradient fill
+      const gN=c.createLinearGradient(0,-fs2*.55,0,fs2*.55);
+      gN.addColorStop(0,'#e9d5ff');gN.addColorStop(.4,'#c084fc');gN.addColorStop(1,'#7c3aed');
       c.fillStyle=gN;c.fillText(roundName,0,0);
-      // white outline
-      c.strokeStyle='rgba(255,255,255,.45)';c.lineWidth=4;c.lineJoin='round';
+      // crisp white outline
+      c.strokeStyle='rgba(255,255,255,.22)';c.lineWidth=3;c.lineJoin='round';
       c.strokeText(roundName,0,0);
-      // glow
-      c.shadowColor='#00dfff';c.shadowBlur=40;c.fillStyle='rgba(0,220,255,.15)';
-      c.fillText(roundName,0,0);c.shadowBlur=0;
       c.restore();
     }
 
     // ── 3 bouncing dots ──
     if(t>PHASE_IN+.2 && t<PHASE_IN+PHASE_HOLD-.1){
-      [teamFill.green,'#f9e000',teamFill.orange].forEach((col,i)=>{
-        const bx=W*.5+(i-1)*28, by=H*.82;
-        const bp=Math.sin((t-PHASE_IN-.2)*6+i*1.2)*.5+.5;
-        c.globalAlpha=.85;
-        c.beginPath();c.arc(bx,by-bp*12,7,0,Math.PI*2);
+      ['#c084fc','#a855f7','#7c3aed'].forEach((col,i)=>{
+        const bx=W*.5+(i-1)*24, by=H*.82;
+        const bp=Math.sin((t-PHASE_IN-.2)*5+i*1.1)*.5+.5;
+        c.globalAlpha=.7+bp*.25;
+        c.beginPath();c.arc(bx,by-bp*10,5+bp*2,0,Math.PI*2);
         c.fillStyle=col;c.fill();
-        c.strokeStyle='rgba(255,255,255,.4)';c.lineWidth=1.5;c.stroke();
       });
       c.globalAlpha=1;
     }
@@ -1157,10 +1169,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>initMenuCanvas(),50);
 });
 
-// ══════════════════════════════════════════════════════
-//  POWERS GAME MODE
-// ══════════════════════════════════════════════════════
-
 var powersMode = false;
 var heldPowers = { green: null, orange: null };
 var shieldedCells = new Set();
@@ -1182,274 +1190,6 @@ const POWERS = [
   { id:'shuffle', emoji:'🌀', name:'خلط',     color:'#e879f9',
     desc:'كل الحروف غير المحجوزة على الشبكة تتخلط من جديد' },
 ];
-
-function triggerPowerSpin(team) {
-  if (!powersMode) return;
-  const power = POWERS[Math.floor(Math.random() * POWERS.length)];
-  showPowerSpin(team, power);
-}
-
-// ── Clean reel-style spin overlay ──
-function showPowerSpin(team, power) {
-  const old = document.getElementById('power-spin');
-  if (old) old.remove();
-
-  const tc = teamFill[team];
-
-  // Build duplicated reel items for seamless scroll illusion
-  const reelItems = [...POWERS, ...POWERS, ...POWERS]; // 3 copies
-  const ITEM_H = 56;
-  const targetIdx = POWERS.indexOf(power);
-  // land on middle copy + target
-  const landIndex = POWERS.length + targetIdx;
-
-  const el = document.createElement('div');
-  el.id = 'power-spin';
-  el.innerHTML = `
-    <div class="ps-backdrop"></div>
-    <div class="ps-card" style="--tc:${tc}">
-      <div class="ps-header" style="color:${tc}">⚡ قوة عشوائية ⚡</div>
-      <div class="ps-team" style="color:${tc}">${names[team]}</div>
-
-      <!-- Reel window -->
-      <div class="ps-reel-window">
-        <div class="ps-reel-highlight"></div>
-        <div class="ps-reel" id="ps-reel">
-          ${reelItems.map(p=>`
-            <div class="ps-reel-item">
-              <span class="ps-reel-emoji">${p.emoji}</span>
-              <span class="ps-reel-label">${p.name}</span>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- Result (hidden until spin ends) -->
-      <div class="ps-result" id="ps-result" style="display:none">
-        <div class="ps-big-emoji">${power.emoji}</div>
-        <div class="ps-power-name" style="color:${power.color}">${power.name}</div>
-        <div class="ps-power-desc">${power.desc}</div>
-      </div>
-
-      <div class="ps-btns" id="ps-btns" style="display:none">
-        <button class="ps-btn ps-use"  onclick="activatePower('${team}','${power.id}')">استخدم الآن ▶</button>
-        <button class="ps-btn ps-save" onclick="savePower('${team}',${JSON.stringify(power).replace(/"/g,'&quot;')})">احتفظ بها 💾</button>
-        <button class="ps-btn ps-skip" onclick="closePowerSpin()">تخطَّ ✕</button>
-      </div>
-    </div>`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('ps-visible'));
-
-  // spin sound — tick-tick-tick slowing down
-  snd(() => unlockAudio().then(a => { if (!a) return; try {
-    const delays = [0,.05,.09,.13,.16,.19,.22,.25,.29,.34,.40,.47,.55,.64,.74,.85];
-    delays.forEach(d => {
-      const o=a.createOscillator(),g=a.createGain();
-      o.connect(g);g.connect(a.destination);o.type='square';
-      o.frequency.value=600-d*200;
-      const t=a.currentTime+d;
-      g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);
-      o.start(t);o.stop(t+.04);
-    });
-  } catch(e){} }));
-
-  // Animate the reel with CSS transition — 5 copies for smooth spin
-  const reel = el.querySelector('#ps-reel');
-  const ITEM_H = 56;
-  // We want to land with targetIdx item centered in the 56px window
-  // Start at top of first copy, end at middle copy + target
-  const startY = 0;
-  // endY: negative to scroll down, center item = -targetIdx*ITEM_H + (window_h/2 - ITEM_H/2) but window clips so just center row
-  const endY = -(POWERS.length + targetIdx) * ITEM_H;
-
-  reel.style.transition = 'none';
-  reel.style.transform = `translateY(0)`;
-
-  // Double RAF to ensure transition:none is applied before we set the animation
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    reel.style.transition = 'transform 1.6s cubic-bezier(.08,.82,.17,1)';
-    reel.style.transform = `translateY(${endY}px)`;
-  }));
-
-  setTimeout(() => revealPower(el, power), 1800);
-}
-
-function revealPower(el, power) {
-  el.querySelector('.ps-reel-window').style.display = 'none';
-  const result = el.querySelector('#ps-result');
-  result.style.display = 'flex';
-  result.style.animation = 'ps-land .4s cubic-bezier(.175,.885,.32,1.5)';
-  el.querySelector('#ps-btns').style.display = 'flex';
-
-  snd(() => unlockAudio().then(a => { if (!a) return; try {
-    [523,659,784,1047].forEach((f,i)=>{
-      const o=a.createOscillator(),g=a.createGain();
-      o.connect(g);g.connect(a.destination);o.type='triangle';o.frequency.value=f;
-      const t=a.currentTime+i*.1;
-      g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);
-      o.start(t);o.stop(t+.35);
-    });
-  } catch(e){} }));
-}
-
-function closePowerSpin() {
-  const el = document.getElementById('power-spin');
-  if (!el) return;
-  el.classList.remove('ps-visible');
-  setTimeout(() => el.remove(), 300);
-}
-
-function savePower(team, power) {
-  heldPowers[team] = power;
-  updatePowerBadges();
-  closePowerSpin();
-  showPowerToast(`💾 ${names[team]} احتفظ بـ ${power.emoji} ${power.name}`);
-}
-
-function activatePower(team, powerId, fromSave) {
-  if (!fromSave) closePowerSpin();
-  const power = POWERS.find(p => p.id === powerId);
-  if (!power) return;
-  const opp = team === 'green' ? 'orange' : 'green';
-
-  switch (powerId) {
-    case 'shield':
-      showPowerToast(`🛡️ انقر على أحد خلاياك لتحميها`);
-      setPowerPickMode(team, 'shield');
-      break;
-    case 'bomb':
-      showPowerToast(`💣 انقر على خليتين من الخصم لمسحهم`);
-      setPowerPickMode(opp, 'bomb', 2);
-      break;
-    case 'steal':
-      showPowerToast(`⚡ انقر على خلية الخصم لأخذها`);
-      setPowerPickMode(opp, 'steal', 1, team);
-      break;
-    case 'block':
-      blockedTeam = opp;
-      updateBlockUI();
-      showPowerToast(`🚫 إجابة ${names[opp]} القادمة محجوبة — فعّلها عند الحاجة`);
-      break;
-    case 'double':
-      heldPowers[team] = { ...power, active: true };
-      updatePowerBadges();
-      showPowerToast(`⭐ ${names[team]} يختار خليتين في دوره القادم!`);
-      if (fromSave) return; // don't null it out below
-      break;
-    case 'shuffle':
-      doShuffle();
-      showPowerToast(`🌀 تم خلط كل الحروف غير المحجوزة!`);
-      break;
-  }
-  if (fromSave) { heldPowers[team] = null; updatePowerBadges(); }
-}
-
-// ── Pick mode ──
-function setPowerPickMode(targetTeam, type, count = 1, beneficiary = null) {
-  powerPickMode = { targetTeam, type, count, remaining: count, beneficiary };
-}
-
-function handlePowerPick(cellId) {
-  if (!powerPickMode) return false;
-  const { targetTeam, type, beneficiary } = powerPickMode;
-  const cell = cells.find(c => c.id === cellId);
-  if (!cell) return false;
-
-  if (type === 'shield') {
-    // shield own cell
-    if (!cell.owner) { showPowerToast(`🛡️ اختر خلية مملوكة لك`); return true; }
-    shieldedCells.add(cellId);
-    draw();
-    showPowerToast(`🛡️ الحرف "${cell.letter}" محمي الآن!`);
-    powerPickMode = null;
-    return true;
-  }
-  if (type === 'bomb') {
-    if (cell.owner !== targetTeam) { showPowerToast(`💣 اختر خلية من الخصم فقط`); return true; }
-    if (shieldedCells.has(cellId)) { showPowerToast(`🛡️ هذه الخلية محمية!`); return true; }
-    cell.owner = null; if (revealMode) cell.revealed = false;
-    shieldedCells.delete(cellId);
-    draw();
-    powerPickMode.remaining--;
-    if (powerPickMode.remaining <= 0) { powerPickMode = null; showPowerToast(`💣 تم التفجير!`); }
-    else showPowerToast(`💣 انقر على خلية أخرى (${powerPickMode.remaining} متبقية)`);
-    return true;
-  }
-  if (type === 'steal') {
-    if (cell.owner !== targetTeam) { showPowerToast(`⚡ اختر خلية من الخصم فقط`); return true; }
-    if (shieldedCells.has(cellId)) { showPowerToast(`🛡️ هذه الخلية محمية!`); return true; }
-    cell.owner = beneficiary;
-    draw();
-    showPowerToast(`⚡ تمت السرقة — الحرف "${cell.letter}" صار لك!`);
-    powerPickMode = null;
-    return true;
-  }
-  return false;
-}
-
-// ── Block power ──
-function updateBlockUI() {
-  const gBtn = document.getElementById('btn-g');
-  const oBtn = document.getElementById('btn-o');
-  const bar  = document.getElementById('block-bar');
-  if (gBtn) gBtn.classList.toggle('blocked-btn', blockedTeam === 'green');
-  if (oBtn) oBtn.classList.toggle('blocked-btn', blockedTeam === 'orange');
-  if (bar)  bar.style.display = blockedTeam ? 'flex' : 'none';
-}
-
-// Call this when the blocked team's answer comes in — presenter triggers it
-function useBlock(team) {
-  if (blockedTeam !== team) return;
-  blockedTeam = null;
-  updateBlockUI();
-  showPowerToast(`🚫 تم تفعيل الحجب — إجابة ${names[team]} لا تُحسب!`);
-}
-
-// ── Double power helper ──
-let doubleNextClaim = { green: false, orange: false };
-
-// ── Shuffle ──
-function doShuffle() {
-  const unowned = cells.filter(c => !c.owner);
-  const letters = unowned.map(c => c.letter).sort(() => Math.random() - .5);
-  unowned.forEach((c, i) => c.letter = letters[i]);
-  draw();
-}
-
-// ── Power badges ──
-function updatePowerBadges() {
-  ['green','orange'].forEach(t => {
-    const badge = document.getElementById(`power-badge-${t==='green'?'g':'o'}`);
-    if (!badge) return;
-    const p = heldPowers[t];
-    badge.textContent = p ? `${p.emoji} ${p.name}` : '';
-    badge.title = p ? p.desc : '';
-    badge.style.display = p ? 'flex' : 'none';
-    badge.onclick = () => { if (p) activatePower(t, p.id, true); };
-  });
-}
-
-// ── Toast ──
-function showPowerToast(msg, duration = 3500) {
-  const old = document.getElementById('power-toast');
-  if (old) old.remove();
-  const el = document.createElement('div');
-  el.id = 'power-toast';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('pt-show'));
-  setTimeout(() => { el.classList.remove('pt-show'); setTimeout(() => el.remove(), 400); }, duration);
-}
-
-function isShielded(id) { return shieldedCells.has(id); }
-
-function resetPowers() {
-  heldPowers = { green: null, orange: null };
-  blockedTeam = null;
-  shieldedCells.clear();
-  powerPickMode = null;
-  updatePowerBadges();
-  updateBlockUI();
-}
 
 // called right after a fresh cell claim (not reassign)
 function triggerPowerSpin(team) {
