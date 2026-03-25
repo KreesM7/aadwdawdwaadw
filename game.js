@@ -672,10 +672,14 @@ function getRoundName(n){
 
 function showRoundWin(team){
   const col=teamFill[team];
-  const dot=`<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${col};vertical-align:middle;margin-left:6px;box-shadow:0 0 8px ${col}"></span>`;
-  document.getElementById('ov-r-e').innerHTML=dot;
+  // Set the animated badge dot color
+  const dot=document.getElementById('ov-r-dot');
+  if(dot){ dot.style.background=col; dot.style.boxShadow=`0 0 16px ${col},0 0 32px ${col}55`; }
+  // Clear old inner dot from ov-r-e (legacy)
+  document.getElementById('ov-r-e').innerHTML='';
   document.getElementById('ov-r-t').textContent=`فاز ${names[team]}!`;
   document.getElementById('ov-r-t').style.color=col;
+  document.getElementById('ov-r-t').style.textShadow=`0 0 30px ${col}88`;
   document.getElementById('ov-r-s').textContent=`جولة ${getRoundName(rNum)} — يلزم ${winsToWin} جولات للفوز`;
   document.getElementById('ov-r').classList.add('show');
   roundHistory.push({rNum,winner:team,name:getRoundName(rNum)});
@@ -953,31 +957,36 @@ function showWinnerTransition(team,onDone){
   const old=document.getElementById('winner-transition');
   if(old) old.remove();
   const tc=teamFill[team],ts=teamBorder[team];
-  const bgGrad=`linear-gradient(145deg,${darken(tc,.25)},${darken(tc,.4)},${darken(tc,.3)})`;
+  // Derive slightly lighter/darker variants for the burst gradient
   const el=document.createElement('div');el.id='winner-transition';
   el.innerHTML=`
-    <div class="wt-bg" style="background:${bgGrad}"></div>
+    <div class="wt-backdrop"></div>
+    <div class="wt-burst" style="--wt-color1:${tc}55;--wt-color2:${tc}22"></div>
     <div class="wt-rays"></div>
+    <div class="wt-rays2"></div>
+    <div class="wt-hexgrid"></div>
+    <div class="wt-shimmer"></div>
     <div class="wt-particles" id="wt-particles"></div>
     <div class="wt-content">
       <div class="wt-trophy">🏆</div>
-      <div class="wt-congrats">مبروك الفوز</div>
-      <div class="wt-team-name" style="color:${tc};text-shadow:4px 4px 0 ${ts},0 0 50px ${tc}99">${names[team]}</div>
-      <div class="wt-sub">حسم البطولة بـ ${winsToWin} جولات!</div>
       <div class="wt-stars">
-        <span class="wt-star" style="animation-delay:.6s">⭐</span>
-        <span class="wt-star" style="animation-delay:.75s;font-size:2.8rem">⭐</span>
-        <span class="wt-star" style="animation-delay:.9s">⭐</span>
+        <span class="wt-star" style="animation-delay:.55s">⭐</span>
+        <span class="wt-star" style="animation-delay:.72s;font-size:clamp(1.8rem,5vw,2.8rem)">⭐</span>
+        <span class="wt-star" style="animation-delay:.89s">⭐</span>
       </div>
+      <div class="wt-congrats">مبروك الفوز</div>
+      <div class="wt-line"></div>
+      <div class="wt-team-name" style="color:${tc};text-shadow:0 0 60px ${tc}99,0 0 20px ${tc}66,4px 4px 0 ${ts}">${names[team]}</div>
+      <div class="wt-sub">حسم البطولة بـ ${winsToWin} جولات!</div>
     </div>`;
   document.body.appendChild(el);
   const pw=el.querySelector('#wt-particles');
-  const syms=['⭐','✨','⬡','💫','⬢'];
-  for(let i=0;i<24;i++){
+  const syms=['⬡','✦','⭐','✨','◆','⬢','💫'];
+  for(let i=0;i<30;i++){
     const p=document.createElement('span');p.className='wt-particle';p.textContent=syms[i%syms.length];
-    p.style.cssText=`left:${Math.random()*100}vw;top:${80+Math.random()*30}vh;
-      font-size:${1+Math.random()*2.5}rem;animation-delay:${.2+Math.random()*.8}s;
-      animation-duration:${1.2+Math.random()*1.2}s;color:${[tc,'#f9e000','#fff'][i%3]};`;
+    p.style.cssText=`left:${Math.random()*100}vw;top:${75+Math.random()*35}vh;
+      font-size:${.8+Math.random()*2.2}rem;animation-delay:${.1+Math.random()*1}s;
+      animation-duration:${1.4+Math.random()*1.4}s;color:${[tc,'#f9e000','#fff','rgba(196,148,255,.8)'][i%4]};`;
     pw.appendChild(p);
   }
   snd(()=>unlockAudio().then(a=>{ if(!a) return; try {
@@ -996,7 +1005,7 @@ function showWinnerTransition(team,onDone){
   setTimeout(()=>{
     el.classList.add('wt-exit');
     setTimeout(()=>{ el.remove();if(onDone) onDone(); },700);
-  },4000);
+  },4200);
 }
 
 const _origShowGameWin=showGameWin;

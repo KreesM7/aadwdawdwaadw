@@ -287,7 +287,10 @@
 
 <div class="ov" id="ov-r">
   <div class="ov-card">
-    <div class="ov-e" id="ov-r-e"></div>
+    <div class="ov-badge">
+      <div class="ov-badge-dot" id="ov-r-dot"></div>
+      <div class="ov-e" id="ov-r-e"></div>
+    </div>
     <div class="ov-t" id="ov-r-t">فاز الفريق!</div>
     <div class="ov-s" id="ov-r-s"></div>
     <button class="ov-b" onclick="nextRound()">الجولة التالية ←</button>
@@ -297,9 +300,15 @@
 <div class="ov" id="ov-g">
   <div class="gw-card">
     <div class="gw-e">🏆</div>
+    <div class="gw-stars-row">
+      <span class="gw-star-item" style="animation-delay:.55s">⭐</span>
+      <span class="gw-star-item" style="animation-delay:.7s;font-size:1.9rem">⭐</span>
+      <span class="gw-star-item" style="animation-delay:.85s">⭐</span>
+    </div>
     <div class="gw-mbr">مبروك الفوز</div>
     <div class="gw-nm" id="gw-nm">الفريق الأول</div>
     <div class="gw-sub" id="gw-sub">حسم البطولة!</div>
+    <div class="gw-divider"></div>
     <div class="gw-btns">
       <button class="gw-b" onclick="showMatchSummary()">📊 ملخص</button>
       <button class="gw-b gw-b2" onclick="newGame()">مرة ثانية</button>
