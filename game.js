@@ -270,10 +270,10 @@ function draw() {
     // ── Outer shadow ring ──
     const outerC=pointyCorners(x,y,R);
     ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-    if(cell.owner==='green')      ctx.fillStyle=darken(teamFill.green,.38);
-    else if(cell.owner==='orange') ctx.fillStyle=darken(teamFill.orange,.38);
-    else if(isSel)                 ctx.fillStyle='#3b0f6e';
-    else                           ctx.fillStyle='#1a0840';
+    if(cell.owner==='green')       ctx.fillStyle=darken(teamFill.green,.45);
+    else if(cell.owner==='orange') ctx.fillStyle=darken(teamFill.orange,.45);
+    else if(isSel)                 ctx.fillStyle='#78350f';
+    else                           ctx.fillStyle='#2e1065';
     ctx.fill();
 
     // ── Inner fill ──
@@ -282,65 +282,55 @@ function draw() {
     let fill;
     if(cell.owner==='green')       fill=teamFill.green;
     else if(cell.owner==='orange') fill=teamFill.orange;
-    else if(isSel)                 fill='#6d28d9';   // deep purple when selected
-    else if(pendingTeam&&isHov)    fill=lighten(pendingTeam==='green'?teamFill.green:teamFill.orange,.3);
-    else if(nextStep==='select')   fill='#5b21b6';
-    else if(nextStep==='green')    fill=lighten(teamFill.green,.25);
-    else if(nextStep==='orange')   fill=lighten(teamFill.orange,.25);
-    else if(nextStep==='clear')    fill='#4c1d95';
-    else                           fill='#3b1278';   // default unowned: rich purple
+    else if(isSel)                 fill='#fde047';
+    else if(pendingTeam&&isHov)    fill=lighten(pendingTeam==='green'?teamFill.green:teamFill.orange,.55);
+    else if(nextStep==='select')   fill='#fef9c3';
+    else if(nextStep==='green')    fill=lighten(teamFill.green,.55);
+    else if(nextStep==='orange')   fill=lighten(teamFill.orange,.55);
+    else if(nextStep==='clear')    fill='#fee2e2';
+    else                           fill='#f5f3ff';
     ctx.fillStyle=fill; ctx.fill();
-
-    // ── Subtle inner bevel (top highlight) ──
-    if(!cell.owner&&!isSel){
-      const bevelC=pointyCorners(x,y,R-BORDER*1.5);
-      ctx.beginPath();ctx.moveTo(...bevelC[0]);for(let i=1;i<3;i++)ctx.lineTo(...bevelC[i]);
-      ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1.2;ctx.stroke();
-    }
 
     // ── Shield glow ──
     if(shieldedCells.has(cell.id)){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.06;ctx.globalAlpha=.8;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.05;ctx.globalAlpha=.75;ctx.stroke();ctx.globalAlpha=1;
     }
 
     // ── Hover ring ──
     if(nextStep&&!pendingTeam){
-      const dc=nextStep==='select'?'rgba(168,85,247,.9)':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'rgba(239,68,68,.8)';
+      const dc=nextStep==='select'?'#fde047':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'#ef4444';
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle=dc;ctx.lineWidth=R*.055;ctx.globalAlpha=.65;ctx.stroke();ctx.globalAlpha=1;
+      ctx.strokeStyle=dc;ctx.lineWidth=R*.05;ctx.globalAlpha=.5;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Selected glow ring ──
+    // ── Selected yellow ring ──
     if(isSel){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
-      ctx.strokeStyle='#c084fc';ctx.lineWidth=R*.06;ctx.globalAlpha=.9;ctx.stroke();ctx.globalAlpha=1;
-      // outer soft glow
-      ctx.beginPath();ctx.moveTo(...pointyCorners(x,y,R+R*.04)[0]);
-      pointyCorners(x,y,R+R*.04).forEach((pt,i)=>{if(i>0)ctx.lineTo(...pt);});
-      ctx.closePath();
-      ctx.strokeStyle='rgba(192,132,252,.25)';ctx.lineWidth=R*.1;ctx.stroke();
+      ctx.strokeStyle='#fde047';ctx.lineWidth=R*.05;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Letter — hidden when selected, shown otherwise ──
+    // ── Letter: shown when unowned/selected, HIDDEN when owned ──
     const showQuestion=revealMode&&!cell.revealed&&!cell.owner;
     const letter=showQuestion?'؟':cell.letter;
     const fs=Math.round(R*.52);
     ctx.font=`800 ${fs}px Tajawal,sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.shadowBlur=0; ctx.shadowColor='transparent'; ctx.shadowOffsetY=0;
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
 
-    if(isSel || cell.owner){
-      // SELECTED or OWNED: letter hidden — clean solid colour fill only
+    if(cell.owner){
+      // OWNED: letter hidden — clean solid team colour only
+    } else if(isSel){
+      // selected yellow: dark letter
+      ctx.fillStyle='#1e0550';
+      ctx.fillText(letter,x,y+fs*.04);
     } else if(showQuestion){
-      ctx.fillStyle='rgba(255,255,255,.3)';
+      ctx.fillStyle='rgba(255,255,255,.35)';
       ctx.fillText(letter,x,y+fs*.04);
     } else {
-      // Unowned: soft white letter on dark purple hex
-      ctx.fillStyle='rgba(220,200,255,.85)';
-      ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=2;
+      // unowned white cell: dark purple letter
+      ctx.fillStyle='#2e1065';
       ctx.fillText(letter,x,y+fs*.04);
-      ctx.shadowBlur=0;
     }
   });
 }
