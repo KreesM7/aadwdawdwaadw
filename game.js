@@ -3,19 +3,22 @@
 // ═══════════════════════════════════════════════════════
 
 const ALL_LETTERS = [...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'];
-// Full pool: letters only — repeat to cover up to 7×7 (49 cells)
-const ALL_CONTENT = [...ALL_LETTERS, ...ALL_LETTERS].slice(0, 49);
+// 28 unique Arabic letters — enough for up to 5×5 (25 cells) without repeats.
+// For 6×6 (36) or 7×7 (49) we extend with digraphs so EVERY cell stays unique.
+const DIGRAPHS = ['شد','طن','قر','فز','خل','حم','غب','سك','صو','ضي','ظث','ذع','تج','نه','رب','وأ','يإ','ءآ','لا','مد'];
+const FULL_POOL = [...ALL_LETTERS, ...DIGRAPHS]; // 48 items — covers up to 7×7 (49)
+
 var ROWS = 5, COLS = 5;
 var gridSize = 5;
 
 // ── State ──────────────────────────────────────────────
 var cells = [], selId = null, pendingTeam = null, hovId = null;
 var wins = { green: 0, orange: 0 };
-var seriesWins = { green: 0, orange: 0 }; // across multiple games (best-of)
+var seriesWins = { green: 0, orange: 0 };
 var rNum = 1;
 var winsToWin = 2;
-var roundEnded = false; // prevents duplicate win scoring
-var claimCount = { green: 0, orange: 0 }; // powers every 3 answers
+var roundEnded = false;
+var claimCount = { green: 0, orange: 0 };
 var names = { green: 'الفريق الأول', orange: 'الفريق الثاني' };
 var teamFill = { green: '#4ade80', orange: '#fb923c' };
 var teamBorder = { green: '#14532d', orange: '#7c2d12' };
@@ -25,10 +28,10 @@ var moveNum = 0;
 var isDark = true;
 var sideCollapsed = false;
 var isMuted = false;
-var revealMode = false;   // letters hidden until claimed
-var undoStack = [];      // [{id, prevOwner}]
-var roundHistory = [];    // [{rNum, winner, name}] — match summary
-var customRoundNames = []; // set from menu
+var revealMode = false;
+var undoStack = [];
+var roundHistory = [];
+var customRoundNames = [];
 
 const cv  = document.getElementById('c');
 const ctx = cv.getContext('2d');
@@ -46,9 +49,6 @@ function applyTheme() {
   root.style.setProperty('--divider',      'rgba(255,255,255,0.12)');
   document.body.style.background = '#2d0a6e';
   applyTeamColors();
-  const mb = document.getElementById('menu-theme-btn');
-  if (mb) mb.textContent = isMuted ? '🔇' : '🔊';
-  // mute btn in game
   const muteBtn = document.getElementById('mute-btn');
   if (muteBtn) muteBtn.textContent = isMuted ? '🔇' : '🔊';
 }
@@ -201,17 +201,31 @@ function cellAt(px,py) {
 }
 
 // ══════════════════════════════════════════════════════
-//  BUILD
+//  BUILD — NO REPEATED CELLS FIX
 // ══════════════════════════════════════════════════════
 function build() {
   const needed = ROWS * COLS;
-  // Shuffle unique pool — ALL_CONTENT has 49 items, enough for 7×7
-  const pool = [...ALL_CONTENT].sort(()=>Math.random()-.5).slice(0, needed);
-  pool.sort(()=>Math.random()-.5);
-  cells=[]; let i=0;
-  for(let r=0;r<ROWS;r++)
-    for(let c=0;c<COLS;c++)
+
+  // Always guarantee uniqueness: shuffle the full pool and take exactly what we need.
+  // FULL_POOL has 48 entries which covers up to 7×7=49; for 7×7 we add one extra entry.
+  let pool = [...FULL_POOL];
+  if (needed > pool.length) {
+    // Safety: pad with numbered placeholders — should never happen with current sizes
+    for (let i = pool.length; i < needed; i++) pool.push(String(i + 1));
+  }
+  // Fisher-Yates shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  pool = pool.slice(0, needed);
+
+  cells = [];
+  let i = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
       cells.push({id:`${r}_${c}`,row:r,col:c,letter:pool[i],cellIndex:i+1,owner:null,revealed:!revealMode}), i++;
+
   moveHistory=[];moveNum=0;undoStack=[];roundEnded=false;selId=null;
   claimCount={green:0,orange:0};
   if(powersMode) resetPowers();
@@ -219,7 +233,7 @@ function build() {
 }
 
 // ══════════════════════════════════════════════════════
-//  BACKGROUND (purple hex grid + team zones)
+//  BACKGROUND
 // ══════════════════════════════════════════════════════
 function drawBackground() {
   const W=cv.width,H=cv.height;
@@ -227,7 +241,6 @@ function drawBackground() {
   const grad=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,Math.max(W,H)*.8);
   grad.addColorStop(0,'#7c35c5');grad.addColorStop(.5,'#5b1fa0');grad.addColorStop(1,'#3a0d6e');
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-  // hex grid overlay
   const hexR=R*1.05,DX2=1.5*hexR,DY2=Math.sqrt(3)*hexR;
   for(let row2=-1;row2<Math.ceil(H/DY2)+3;row2++)
     for(let col2=-1;col2<Math.ceil(W/DX2)+3;col2++){
@@ -236,7 +249,6 @@ function drawBackground() {
       ctx.beginPath();ctx.moveTo(...pts[0]);for(let i=1;i<6;i++)ctx.lineTo(...pts[i]);ctx.closePath();
       ctx.strokeStyle='rgba(200,160,255,0.06)';ctx.lineWidth=1.2;ctx.stroke();
     }
-  // team zones
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W,0);
   for(let c=COLS-1;c>=0;c--){const p=P(0,c);ctx.lineTo(...p[0]);ctx.lineTo(...p[1]);ctx.lineTo(...p[2]);}
   ctx.closePath();ctx.fillStyle=teamZone.green;ctx.fill();
@@ -260,14 +272,13 @@ function draw() {
   cells.forEach(cell=>{
     const {x,y}=cxy(cell.row,cell.col);
     const isSel=selId===cell.id, isHov=hovId===cell.id;
-    const BORDER=R*0.10; // softer border
+    const BORDER=R*0.10;
     const nextStep=!pendingTeam&&isHov?(
         (!cell.owner&&!isSel)?'select'
       :(isSel&&!cell.owner)?'green'
       :cell.owner==='green'?'orange'
       :cell.owner==='orange'?'clear':null):null;
 
-    // ── Outer shadow ring ──
     const outerC=pointyCorners(x,y,R);
     ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
     if(cell.owner==='green')       ctx.fillStyle=darken(teamFill.green,.45);
@@ -276,7 +287,6 @@ function draw() {
     else                           ctx.fillStyle='#2e1065';
     ctx.fill();
 
-    // ── Inner fill ──
     const innerC=pointyCorners(x,y,R-BORDER);
     ctx.beginPath();ctx.moveTo(...innerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...innerC[i]);ctx.closePath();
     let fill;
@@ -291,26 +301,22 @@ function draw() {
     else                           fill='#f5f3ff';
     ctx.fillStyle=fill; ctx.fill();
 
-    // ── Shield glow ──
     if(shieldedCells.has(cell.id)){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
       ctx.strokeStyle='#38bdf8';ctx.lineWidth=R*.05;ctx.globalAlpha=.75;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Hover ring ──
     if(nextStep&&!pendingTeam){
       const dc=nextStep==='select'?'#fde047':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'#ef4444';
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
       ctx.strokeStyle=dc;ctx.lineWidth=R*.05;ctx.globalAlpha=.5;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Selected yellow ring ──
     if(isSel){
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
       ctx.strokeStyle='#fde047';ctx.lineWidth=R*.05;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
     }
 
-    // ── Letter: shown when unowned/selected, HIDDEN when owned ──
     const showQuestion=revealMode&&!cell.revealed&&!cell.owner;
     const letter=showQuestion?'؟':cell.letter;
     const fs=Math.round(R*.52);
@@ -319,23 +325,20 @@ function draw() {
     ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
 
     if(cell.owner){
-      // OWNED: letter hidden — clean solid team colour only
+      // owned: no letter shown
     } else if(isSel){
-      // selected yellow: dark letter
       ctx.fillStyle='#1e0550';
       ctx.fillText(letter,x,y+fs*.04);
     } else if(showQuestion){
       ctx.fillStyle='rgba(255,255,255,.35)';
       ctx.fillText(letter,x,y+fs*.04);
     } else {
-      // unowned white cell: dark purple letter
       ctx.fillStyle='#2e1065';
       ctx.fillText(letter,x,y+fs*.04);
     }
   });
 }
 
-// ── Color helpers ──
 function lighten(hex,amt){
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return `#${[r,g,b].map(v=>Math.round(v+(255-v)*amt).toString(16).padStart(2,'0')).join('')}`;
@@ -420,33 +423,28 @@ function onCell(id){
   if(pendingTeam){doAssign(id,pendingTeam);clearSt();return;}
   const cell=cells.find(c=>c.id===id);
   if(!cell) return;
-  // reveal mode: first click reveals
   if(revealMode&&!cell.revealed&&!cell.owner){
     cell.revealed=true;playSelectSound();draw();return;
   }
-  // click cycle: empty→yellow select → green → orange → clear
   if(!cell.owner && selId!==id){
-    selId=id; playSelectSound(); draw();           // 1st click: yellow
+    selId=id; playSelectSound(); draw();
   } else if(selId===id && !cell.owner){
-    selId=null; doAssign(id,'green');              // 2nd click: green
+    selId=null; doAssign(id,'green');
   } else if(cell.owner==='green'){
-    doAssign(id,'orange');                         // 3rd click: orange
+    doAssign(id,'orange');
   } else if(cell.owner==='orange'){
     selId=null;
     undoStack.push({id,prevOwner:cell.owner});
     cell.owner=null; playUnselectSound();
     moveHistory.unshift({team:'clear',letter:cell.letter,num:'—',action:'clear'});
     if(moveHistory.length>8) moveHistory.pop();
-    renderHistory(); draw();                       // 4th click: clear
+    renderHistory(); draw();
   }
 }
 
 function doAssign(id,team){
   if(roundEnded) return;
-  // power pick mode intercept
   if(powerPickMode){ handlePowerPick(id); return; }
-  // block check — presenter uses block button manually, not auto
-  // shield check
   const cellCheck=cells.find(c=>c.id===id);
   if(cellCheck&&cellCheck.owner&&cellCheck.owner!==team&&shieldedCells.has(id)){
     showPowerToast(`🛡️ هذه الخلية محمية من ${names[cellCheck.owner]}!`); return;
@@ -488,7 +486,6 @@ function clearSt(){
   draw();
 }
 
-// ── UNDO ──
 function undoMove(){
   if(!undoStack.length) return;
   const {id,prevOwner}=undoStack.pop();
@@ -502,36 +499,27 @@ function undoMove(){
   renderHistory();draw();
 }
 
-// ── SWAP TEAMS ──
 function swapTeams(){
-  // swap names
   const tmp=names.green; names.green=names.orange; names.orange=tmp;
-  // swap colors
   [teamFill.green,teamFill.orange]=[teamFill.orange,teamFill.green];
   [teamBorder.green,teamBorder.orange]=[teamBorder.orange,teamBorder.green];
   [teamZone.green,teamZone.orange]=[teamZone.orange,teamZone.green];
-  // swap wins
   [wins.green,wins.orange]=[wins.orange,wins.green];
-  // swap cell ownership
   cells.forEach(c=>{
     if(c.owner==='green') c.owner='orange';
     else if(c.owner==='orange') c.owner='green';
   });
-  // re-assign undo stack owners
   undoStack.forEach(u=>{
     if(u.prevOwner==='green') u.prevOwner='orange';
     else if(u.prevOwner==='orange') u.prevOwner='green';
   });
-  // Update inputs
   document.getElementById('name-g').value=names.green;
   document.getElementById('name-o').value=names.orange;
   syncNames();updateScore();applyTeamColors();draw();
-  // Flash swap btn
   const btn=document.getElementById('swap-btn');
   if(btn){btn.style.transform='rotate(180deg)';setTimeout(()=>btn.style.transform='',400);}
 }
 
-// ── REVEAL MODE TOGGLE ──
 function toggleReveal(){
   revealMode=!revealMode;
   cells.forEach(c=>{ c.revealed=!revealMode||!!c.owner; });
@@ -540,7 +528,6 @@ function toggleReveal(){
   draw();
 }
 
-// ── FULLSCREEN ──
 function toggleFullscreen(){
   if(!document.fullscreenElement&&!document.webkitFullscreenElement){
     const el=document.documentElement;
@@ -550,34 +537,22 @@ function toggleFullscreen(){
   }
 }
 function onFullscreenChange(){
-  const isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
-  ['fs-btn','fs-float-btn'].forEach(id=>{
-    const b=document.getElementById(id);
-    if(b) b.textContent=isFs?'⛶':'⛶';
-  });
   resize();
 }
 document.addEventListener('fullscreenchange',onFullscreenChange);
 document.addEventListener('webkitfullscreenchange',onFullscreenChange);
 
-// ── RESPONSIVE LAYOUT ──
 function applyLayout(){
-  const W=window.innerWidth, H=window.innerHeight;
+  const W=window.innerWidth;
   const isMobile=W<700;
-  const isTV=W>=1800;
-  const gameEl=document.getElementById('game-screen');
   const side=document.getElementById('side');
   const mb=document.getElementById('mobile-bar');
-
-  if(gameEl){
-    if(isMobile){
-      // On mobile: stack vertically, hide side panel, show bottom bar
-      if(side){ side.style.display='none'; }
-      if(mb){ mb.style.display='flex'; }
-    } else {
-      if(side){ side.style.display=''; }
-      if(mb){ mb.style.display='none'; }
-    }
+  if(isMobile){
+    if(side) side.style.display='none';
+    if(mb) mb.style.display='flex';
+  } else {
+    if(side) side.style.display='';
+    if(mb) mb.style.display='none';
   }
   syncMobileBar();
   resize();
@@ -643,7 +618,6 @@ function updateScore(){
   });
   const wEl=document.getElementById('wins-needed');
   if(wEl) wEl.textContent=winsToWin;
-  // sync mobile bar
   if(typeof syncMobileBar==='function') syncMobileBar();
   const sg=document.getElementById('series-g');
   const so=document.getElementById('series-o');
@@ -670,28 +644,76 @@ function getRoundName(n){
   return RN[n]||String(n);
 }
 
+// ── ROUND WIN — polished version ──
 function showRoundWin(team){
-  const col=teamFill[team];
-  // Set the animated badge dot color
-  const dot=document.getElementById('ov-r-dot');
-  if(dot){ dot.style.background=col; dot.style.boxShadow=`0 0 16px ${col},0 0 32px ${col}55`; }
-  // Clear old inner dot from ov-r-e (legacy)
-  document.getElementById('ov-r-e').innerHTML='';
-  document.getElementById('ov-r-t').textContent=`فاز ${names[team]}!`;
-  document.getElementById('ov-r-t').style.color=col;
-  document.getElementById('ov-r-t').style.textShadow=`0 0 30px ${col}88`;
-  document.getElementById('ov-r-s').textContent=`جولة ${getRoundName(rNum)} — يلزم ${winsToWin} جولات للفوز`;
-  document.getElementById('ov-r').classList.add('show');
-  roundHistory.push({rNum,winner:team,name:getRoundName(rNum)});
+  const col = teamFill[team];
+
+  // ── colour the card accent ──
+  const card = document.querySelector('#ov-r .ov-card');
+  if (card) {
+    card.style.setProperty('--win-accent', col);
+    card.style.boxShadow = `0 40px 100px rgba(0,0,0,.85), 0 0 80px -20px ${col}55, inset 0 1px 0 rgba(255,255,255,.06)`;
+  }
+
+  // badge dot
+  const dot = document.getElementById('ov-r-dot');
+  if (dot) {
+    dot.style.background = col;
+    dot.style.boxShadow  = `0 0 0 6px ${col}22, 0 0 24px ${col}88`;
+  }
+
+  // team emoji (first letter as a circle emoji approach — use a coloured ring)
+  const eEl = document.getElementById('ov-r-e');
+  if (eEl) eEl.innerHTML = `<span style="font-size:1.4rem;line-height:1;">🎯</span>`;
+
+  // title
+  const tEl = document.getElementById('ov-r-t');
+  if (tEl) {
+    tEl.textContent = `فاز ${names[team]}!`;
+    tEl.style.color = '#fff';
+    tEl.style.textShadow = `0 0 40px ${col}88`;
+  }
+
+  // subtitle
+  const sEl = document.getElementById('ov-r-s');
+  if (sEl) sEl.textContent = `جولة ${getRoundName(rNum)} · ${wins[team]}/${winsToWin} جولات`;
+
+  // update the next-round button colour
+  const btn = document.querySelector('#ov-r .ov-b');
+  if (btn) {
+    btn.style.background = `linear-gradient(135deg, ${darken(col,.7)}, ${col})`;
+    btn.style.boxShadow  = `0 6px 24px ${col}55, inset 0 1px 0 rgba(255,255,255,.2)`;
+    btn.style.color      = col === '#f9e000' ? '#1a0a00' : '#fff';
+  }
+
+  // re-trigger card animation
+  const ov = document.getElementById('ov-r');
+  ov.classList.remove('show');
+  void ov.offsetWidth; // reflow → restart animation
+  ov.classList.add('show');
+
+  roundHistory.push({rNum, winner:team, name:getRoundName(rNum)});
 }
 
+// ── GAME WIN ──
 function showGameWin(team){
   seriesWins[team]++;
-  document.getElementById('gw-nm').textContent=names[team];
-  document.getElementById('gw-nm').style.color=teamFill[team];
-  document.getElementById('gw-sub').textContent=`فاز بـ ${winsToWin} جولات وحسم البطولة!`;
-  roundHistory.push({rNum,winner:team,name:getRoundName(rNum),final:true});
-  document.getElementById('ov-g').classList.add('show');
+  const col = teamFill[team];
+
+  const nm = document.getElementById('gw-nm');
+  if (nm) { nm.textContent = names[team]; nm.style.color = col; nm.style.textShadow = `0 2px 30px ${col}66`; }
+
+  const sub = document.getElementById('gw-sub');
+  if (sub) sub.textContent = `فاز بـ ${winsToWin} جولات وحسم البطولة!`;
+
+  roundHistory.push({rNum, winner:team, name:getRoundName(rNum), final:true});
+
+  // re-trigger card animation
+  const ov = document.getElementById('ov-g');
+  ov.classList.remove('show');
+  void ov.offsetWidth;
+  ov.classList.add('show');
+
   spawnConfetti();
   updateScore();
 }
@@ -717,7 +739,6 @@ function newGame(){
   updateScore();build();clearSt();
 }
 
-// ── Match Summary ──
 function showMatchSummary(){
   document.getElementById('ov-g').classList.remove('show');
   const el=document.getElementById('match-summary');
@@ -768,7 +789,7 @@ function spawnConfetti(){
 }
 
 // ══════════════════════════════════════════════════════
-//  ROUND TRANSITION — full canvas cinematic
+//  ROUND TRANSITION
 // ══════════════════════════════════════════════════════
 function showRoundTransition(roundName,onDone){
   const old=document.getElementById('round-transition');
@@ -786,15 +807,12 @@ function showRoundTransition(roundName,onDone){
   let W=window.innerWidth,H=window.innerHeight;
   canvas.width=W;canvas.height=H;
 
-  // ── sound ──
   snd(()=>unlockAudio().then(a=>{ if(!a) return; try {
-    // whoosh
     const ob=a.createOscillator(),gb=a.createGain();
     ob.connect(gb);gb.connect(a.destination);ob.type='sawtooth';
     ob.frequency.setValueAtTime(120,a.currentTime);ob.frequency.exponentialRampToValueAtTime(480,a.currentTime+.35);
     gb.gain.setValueAtTime(.18,a.currentTime);gb.gain.exponentialRampToValueAtTime(.001,a.currentTime+.55);
     ob.start(a.currentTime);ob.stop(a.currentTime+.55);
-    // sparkle trio
     [880,1100,1320].forEach((f,i)=>{
       const o=a.createOscillator(),g=a.createGain();
       o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;
@@ -802,7 +820,6 @@ function showRoundTransition(roundName,onDone){
       g.gain.setValueAtTime(.14,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);
       o.start(t);o.stop(t+.3);
     });
-    // low thud
     const ot=a.createOscillator(),gt=a.createGain();
     ot.connect(gt);gt.connect(a.destination);ot.type='sine';
     ot.frequency.setValueAtTime(60,a.currentTime);ot.frequency.exponentialRampToValueAtTime(30,a.currentTime+.4);
@@ -810,7 +827,6 @@ function showRoundTransition(roundName,onDone){
     ot.start(a.currentTime);ot.stop(a.currentTime+.45);
   } catch(e){} }));
 
-  // ── animated hex particles ──
   const hexParts=Array.from({length:22},(_,i)=>({
     x:Math.random()*W, y:Math.random()*H,
     r:18+Math.random()*44,
@@ -821,7 +837,7 @@ function showRoundTransition(roundName,onDone){
     color:['rgba(168,85,247,0.9)','rgba(139,92,246,0.9)','rgba(196,148,255,0.7)','rgba(255,255,255,0.35)','rgba(109,40,217,0.8)'][i%5]
   }));
 
-  let startT=null,phase='in'; // phases: in / hold / out
+  let startT=null;
   const PHASE_IN=.55, PHASE_HOLD=1.8, PHASE_OUT=.55;
 
   function drawHex(cx,cy,r,rot,alpha,col){
@@ -833,7 +849,6 @@ function showRoundTransition(roundName,onDone){
     }
     c.closePath();
     c.strokeStyle=col;c.lineWidth=2.5;c.stroke();
-    // inner
     const ri=r*.7;c.beginPath();
     for(let i=0;i<6;i++){const a=(Math.PI/3)*i+Math.PI/6;i===0?c.moveTo(ri*Math.cos(a),ri*Math.sin(a)):c.lineTo(ri*Math.cos(a),ri*Math.sin(a));}
     c.closePath();c.strokeStyle=col;c.lineWidth=1;c.globalAlpha=alpha*.4;c.stroke();
@@ -845,23 +860,19 @@ function showRoundTransition(roundName,onDone){
     const t=(ts-startT)/1000;
     c.clearRect(0,0,W,H);
 
-    // ── background wipe ──
     let bgAlpha=0;
     if(t<PHASE_IN) bgAlpha=t/PHASE_IN;
     else if(t<PHASE_IN+PHASE_HOLD) bgAlpha=1;
     else bgAlpha=Math.max(0,1-(t-PHASE_IN-PHASE_HOLD)/PHASE_OUT);
 
-    // Purple gradient bg
     const grad=c.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.7);
     grad.addColorStop(0,'#9b4dca');grad.addColorStop(.5,'#6b21a8');grad.addColorStop(1,'#3b0764');
     c.globalAlpha=bgAlpha;
     c.fillStyle=grad;c.fillRect(0,0,W,H);
 
-    // scanlines vibe
     c.globalAlpha=bgAlpha*.04;
     for(let y=0;y<H;y+=4){c.fillStyle='#000';c.fillRect(0,y,W,2);}
 
-    // ── hex particles ──
     hexParts.forEach(p=>{
       if(t<p.delay) return;
       p.life=Math.min(1,(t-p.delay)/.5);
@@ -874,32 +885,26 @@ function showRoundTransition(roundName,onDone){
 
     c.globalAlpha=1;
 
-    // ── "الجولة" label ──
     if(t>PHASE_IN*.3){
       const lp=Math.min(1,(t-PHASE_IN*.3)/(PHASE_IN*.5));
       const ease=lp<.5?2*lp*lp:(4-2*lp)*lp-1;
-      const lx=W*.5;
-      const ly=H*.36;
       const la=ease*(t<PHASE_IN+PHASE_HOLD?1:Math.max(0,1-(t-PHASE_IN-PHASE_HOLD)/PHASE_OUT));
       const slideY=30*(1-ease);
       c.save();c.globalAlpha=la;
-      c.translate(lx,ly+slideY);
+      c.translate(W*.5,H*.36+slideY);
       const fs1=Math.min(W*.09,72);
       c.font=`800 ${fs1}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
-      // soft shadow
       c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=18;c.shadowOffsetY=4;
       c.fillStyle='rgba(255,255,255,.9)';
       c.fillText('الجولة',0,0);
       c.shadowBlur=0;c.shadowOffsetY=0;
-      // subtle purple underline
       const tw=c.measureText('الجولة').width;
       c.strokeStyle='rgba(192,132,252,.5)';c.lineWidth=2;
       c.beginPath();c.moveTo(-tw*.4,fs1*.55);c.lineTo(tw*.4,fs1*.55);c.stroke();
       c.restore();
     }
 
-    // ── Round name ──
     if(t>PHASE_IN*.55){
       const np=Math.min(1,(t-PHASE_IN*.55)/(PHASE_IN*.5));
       const ease=np<.5?4*np*np*np:(np-1)*(2*np-2)*(2*np-2)+1;
@@ -911,24 +916,19 @@ function showRoundTransition(roundName,onDone){
       const fs2=Math.min(W*.16,120);
       c.font=`900 ${fs2}px Tajawal,sans-serif`;
       c.textAlign='center';c.textBaseline='middle';
-      // glow halo
       c.shadowColor='#c084fc';c.shadowBlur=55;
       c.fillStyle='rgba(192,132,252,.18)';c.fillText(roundName,0,0);
       c.shadowBlur=0;
-      // hard shadow
       c.fillStyle='rgba(30,5,80,.7)';
       for(let s=5;s>=1;s--) c.fillText(roundName,s*1.2,s*1.5);
-      // main gradient fill
       const gN=c.createLinearGradient(0,-fs2*.55,0,fs2*.55);
       gN.addColorStop(0,'#e9d5ff');gN.addColorStop(.4,'#c084fc');gN.addColorStop(1,'#7c3aed');
       c.fillStyle=gN;c.fillText(roundName,0,0);
-      // crisp white outline
       c.strokeStyle='rgba(255,255,255,.22)';c.lineWidth=3;c.lineJoin='round';
       c.strokeText(roundName,0,0);
       c.restore();
     }
 
-    // ── 3 bouncing dots ──
     if(t>PHASE_IN+.2 && t<PHASE_IN+PHASE_HOLD-.1){
       ['#c084fc','#a855f7','#7c3aed'].forEach((col,i)=>{
         const bx=W*.5+(i-1)*24, by=H*.82;
@@ -957,7 +957,6 @@ function showWinnerTransition(team,onDone){
   const old=document.getElementById('winner-transition');
   if(old) old.remove();
   const tc=teamFill[team],ts=teamBorder[team];
-  // Derive slightly lighter/darker variants for the burst gradient
   const el=document.createElement('div');el.id='winner-transition';
   el.innerHTML=`
     <div class="wt-backdrop"></div>
@@ -1100,16 +1099,10 @@ function onColorChange(team,hex){
 }
 
 // ══════════════════════════════════════════════════════
-//  REVEAL MODE toggle (from sidebar button)
-//  ALREADY defined above — no duplicate
-// ══════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════
 //  START / NAVIGATION
 // ══════════════════════════════════════════════════════
 function startGame(){
   unlockAudio();
-  // Apply grid size
   ROWS = gridSize; COLS = gridSize;
   const gName=document.getElementById('menu-name-g').value.trim()||'الفريق الأول';
   const oName=document.getElementById('menu-name-o').value.trim()||'الفريق الثاني';
@@ -1117,7 +1110,6 @@ function startGame(){
   const gameName=rawInput?`لعبة خلية ${rawInput}`:'لعبة الخلية';
   const wEl=document.getElementById('wins-needed');
   if(wEl) wEl.textContent=winsToWin;
-  // Custom round names from menu
   customRoundNames=[];
   for(let i=1;i<=10;i++){
     const inp=document.getElementById(`custom-round-${i}`);
@@ -1164,10 +1156,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 var powersMode = false;
 var heldPowers = { green: null, orange: null };
 var shieldedCells = new Set();
-var blockedTeam = null; // team whose NEXT correct answer is blocked by presenter
+var blockedTeam = null;
 var powerPickMode = null;
 
-// Powers redesigned for PRESENTER-based game (no time pressure)
 const POWERS = [
   { id:'shield',  emoji:'🛡️', name:'درع',     color:'#38bdf8',
     desc:'اختر أي خلية من خلاياك — تصير محمية ولا يقدر أحد يسرقها' },
@@ -1183,14 +1174,12 @@ const POWERS = [
     desc:'كل الحروف غير المحجوزة على الشبكة تتخلط من جديد' },
 ];
 
-// called right after a fresh cell claim (not reassign)
 function triggerPowerSpin(team) {
   if (!powersMode) return;
   const power = POWERS[Math.floor(Math.random() * POWERS.length)];
   showPowerSpin(team, power);
 }
 
-// ── Spin animation overlay ──
 function showPowerSpin(team, power) {
   const old = document.getElementById('power-spin');
   if (old) old.remove();
@@ -1221,7 +1210,6 @@ function showPowerSpin(team, power) {
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('ps-visible'));
 
-  // spin sound
   snd(() => unlockAudio().then(a => { if (!a) return; try {
     for (let i = 0; i < 8; i++) {
       const o = a.createOscillator(), g = a.createGain();
@@ -1233,7 +1221,6 @@ function showPowerSpin(team, power) {
     }
   } catch(e){} }));
 
-  // spin the wheel, then reveal
   const wheel = el.querySelector('#ps-wheel');
   const slotH = 48;
   let speed = 22, pos = 0, ticks = 0, targetTicks = 28 + Math.floor(Math.random() * 16);
@@ -1247,7 +1234,6 @@ function showPowerSpin(team, power) {
       ticks++;
       setTimeout(spinStep, 16 + (ticks > targetTicks * 0.7 ? ticks * 1.2 : 0));
     } else {
-      // snap to target
       wheel.style.transform = `translateY(${-targetIdx * slotH}px)`;
       wheel.style.transition = 'transform 0.3s cubic-bezier(.175,.885,.32,1.5)';
       setTimeout(() => revealPower(el, power, tc), 400);
@@ -1261,7 +1247,6 @@ function revealPower(el, power, tc) {
   el.querySelector('#ps-landing').style.display = 'flex';
   el.querySelector('#ps-btns').style.display = 'flex';
 
-  // reveal sound
   snd(() => unlockAudio().then(a => { if (!a) return; try {
     [523, 659, 784, 1047].forEach((f, i) => {
       const o = a.createOscillator(), g = a.createGain();
@@ -1327,8 +1312,6 @@ function activatePower(team, powerId, fromSave) {
   if (fromSave) { heldPowers[team] = null; updatePowerBadges(); }
 }
 
-// ── Power pick mode: next cell click is intercepted ──
-// powerPickMode already declared above // {team, type, count, beneficiary}
 function setPowerPickMode(targetTeam, type, count = 1, beneficiary = null) {
   powerPickMode = { targetTeam, type, count, remaining: count, beneficiary };
   showPowerToast(count > 1 ? `انقر على ${count} خلايا` : `انقر على خلية`, 8000);
@@ -1342,7 +1325,6 @@ function handlePowerPick(cellId) {
 
   if (type === 'shield') {
     if (cell.owner !== targetTeam && cell.owner !== (targetTeam === 'green' ? 'orange' : 'green')) return false;
-    // actually shield is for OWN cell
     shieldedCells.add(cellId);
     draw();
     showPowerToast(`🛡️ الخلية "${cell.letter}" محمية الآن!`);
@@ -1385,7 +1367,6 @@ function updateFreezeUI() {
   if (oBtn) oBtn.classList.toggle('frozen-btn', frozenTeam === 'orange');
 }
 
-// ── Power badges in sidebar ──
 function updatePowerBadges() {
   ['green','orange'].forEach(t => {
     const badge = document.getElementById(`power-badge-${t === 'green' ? 'g' : 'o'}`);
@@ -1398,7 +1379,6 @@ function updatePowerBadges() {
   });
 }
 
-// ── Toast notification ──
 function showPowerToast(msg, duration = 3000) {
   const old = document.getElementById('power-toast');
   if (old) old.remove();
@@ -1410,10 +1390,8 @@ function showPowerToast(msg, duration = 3000) {
   setTimeout(() => { el.classList.remove('pt-show'); setTimeout(() => el.remove(), 400); }, duration);
 }
 
-// ── Shield draw helper (called from draw) ──
 function isShielded(cellId) { return shieldedCells.has(cellId); }
 
-// ── Reset powers on new round/game ──
 function resetPowers() {
   heldPowers = { green: null, orange: null };
   frozenTeam = null;
