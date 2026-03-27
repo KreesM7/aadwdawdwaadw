@@ -3,10 +3,9 @@
 // ═══════════════════════════════════════════════════════
 
 const ALL_LETTERS = [...'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'];
-// 28 unique Arabic letters — enough for up to 5×5 (25 cells) without repeats.
-// For 6×6 (36) or 7×7 (49) we extend with digraphs so EVERY cell stays unique.
-const DIGRAPHS = ['شد','طن','قر','فز','خل','حم','غب','سك','صو','ضي','ظث','ذع','تج','نه','رب','وأ','يإ','ءآ','لا','مد'];
-const FULL_POOL = [...ALL_LETTERS, ...DIGRAPHS]; // 48 items — covers up to 7×7 (49)
+// 28 unique Arabic letters — perfectly covers 3×3 (9), 4×4 (16), and 5×5 (25) with NO repeats.
+// For 6×6 (36) or 7×7 (49) the extra cells beyond 28 will reuse letters — still shuffled randomly.
+const FULL_POOL = ALL_LETTERS; // single letters only, never digraphs
 
 var ROWS = 5, COLS = 5;
 var gridSize = 5;
@@ -201,22 +200,27 @@ function cellAt(px,py) {
 }
 
 // ══════════════════════════════════════════════════════
-//  BUILD — NO REPEATED CELLS FIX
+//  BUILD — UNIQUE SINGLE ARABIC LETTERS PER CELL
 // ══════════════════════════════════════════════════════
 function build() {
   const needed = ROWS * COLS;
 
-  // Always guarantee uniqueness: shuffle the full pool and take exactly what we need.
-  // FULL_POOL has 48 entries which covers up to 7×7=49; for 7×7 we add one extra entry.
-  let pool = [...FULL_POOL];
-  if (needed > pool.length) {
-    // Safety: pad with numbered placeholders — should never happen with current sizes
-    for (let i = pool.length; i < needed; i++) pool.push(String(i + 1));
+  // Fisher-Yates shuffle of the 28 Arabic letters
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
-  // Fisher-Yates shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+
+  // 5x5 = 25 cells, 28 letters → every cell is unique, no repeats at all.
+  // 6x6 = 36 or 7x7 = 49 → use two separate shuffles joined; first 28 are unique,
+  // remainder pulls from a second shuffle (still only single letters, never digraphs).
+  let pool = shuffle(ALL_LETTERS);
+  if (needed > pool.length) {
+    pool = [...pool, ...shuffle(ALL_LETTERS)];
   }
   pool = pool.slice(0, needed);
 
