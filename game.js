@@ -17,7 +17,6 @@ var seriesWins = { green: 0, orange: 0 };
 var rNum = 1;
 var winsToWin = 2;
 var roundEnded = false;
-var claimCount = { green: 0, orange: 0 };
 var names = { green: 'الفريق الأول', orange: 'الفريق الثاني' };
 var teamFill = { green: '#4ade80', orange: '#fb923c' };
 var teamBorder = { green: '#14532d', orange: '#7c2d12' };
@@ -231,8 +230,6 @@ function build() {
       cells.push({id:`${r}_${c}`,row:r,col:c,letter:pool[i],cellIndex:i+1,owner:null,revealed:!revealMode}), i++;
 
   moveHistory=[];moveNum=0;undoStack=[];roundEnded=false;selId=null;
-  claimCount={green:0,orange:0};
-  // resetPowers disabled
   setTimeout(()=>renderHistory(),0);
 }
 
@@ -305,8 +302,7 @@ function draw() {
     else                           fill='#f5f3ff';
     ctx.fillStyle=fill; ctx.fill();
 
-    // Shield draw disabled
-
+  
     if(nextStep&&!pendingTeam){
       const dc=nextStep==='select'?'#fde047':nextStep==='green'?teamFill.green:nextStep==='orange'?teamFill.orange:'#ef4444';
       ctx.beginPath();ctx.moveTo(...outerC[0]);for(let i=1;i<6;i++)ctx.lineTo(...outerC[i]);ctx.closePath();
@@ -445,7 +441,6 @@ function onCell(id){
 
 function doAssign(id,team){
   if(roundEnded) return;
-  // Powers disabled — powerPickMode and shield checks skipped
   const cell=cells.find(c=>c.id===id);
   if(!cell){clearSt();draw();return;}
   undoStack.push({id,prevOwner:cell.owner});
@@ -458,8 +453,7 @@ function doAssign(id,team){
     moveNum++;
     moveHistory.unshift({team,letter:cell.letter,num:moveNum,action:'claim'});
     if(moveHistory.length>8) moveHistory.pop();
-    // Powers disabled — no spin trigger
-  } else if(wasOwned!==team){
+    } else if(wasOwned!==team){
     moveHistory.unshift({team,letter:cell.letter,num:'↺',action:'change',from:wasOwned});
     if(moveHistory.length>8) moveHistory.pop();
   }
@@ -1119,9 +1113,6 @@ function startGame(){
   menuEl.classList.add('fade-out');
   setTimeout(()=>{menuEl.style.display='none';stopMenuCanvas();},500);
   syncNames();build();applyTheme();renderHistory();
-  // Hide powers UI
-  const bb=document.getElementById('block-bar');if(bb)bb.style.display='none';
-  updatePowerBadges();
   window.addEventListener('resize',resize);
   document.fonts.ready.then(()=>{ resize(); if(typeof applyLayout==='function') applyLayout(); });
   resize(); updateScore();
@@ -1151,244 +1142,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── Powers mode disabled (temporarily) ──
-var powersMode = false;          // DISABLED — set to false permanently for now
-var heldPowers = { green: null, orange: null };
-var shieldedCells = new Set();   // always empty while disabled
-var blockedTeam = null;
-var powerPickMode = null;        // always null while disabled
 
-const POWERS = [
-  { id:'shield',  emoji:'🛡️', name:'درع',     color:'#38bdf8',
-    desc:'اختر أي خلية من خلاياك — تصير محمية ولا يقدر أحد يسرقها' },
-  { id:'bomb',    emoji:'💣', name:'قنبلة',   color:'#ef4444',
-    desc:'المقدم يختار خليتين من الخصم ويمسحهم فوراً' },
-  { id:'steal',   emoji:'⚡', name:'سرقة',    color:'#f9e000',
-    desc:'اختر أي خلية من الخصم — تصبح ملكك مباشرةً' },
-  { id:'block',   emoji:'🚫', name:'حجب',     color:'#f97316',
-    desc:'الإجابة الصحيحة القادمة للخصم لا تُحسب — المقدم يفعّلها وقت المناسب' },
-  { id:'double',  emoji:'⭐', name:'مضاعف',   color:'#fbbf24',
-    desc:'اختر خليتين بدل خلية واحدة في دورك القادم' },
-  { id:'shuffle', emoji:'🌀', name:'خلط',     color:'#e879f9',
-    desc:'كل الحروف غير المحجوزة على الشبكة تتخلط من جديد' },
-];
-
-function triggerPowerSpin(team) {
-  if (!powersMode) return;
-  const power = POWERS[Math.floor(Math.random() * POWERS.length)];
-  showPowerSpin(team, power);
-}
-
-function showPowerSpin(team, power) {
-  const old = document.getElementById('power-spin');
-  if (old) old.remove();
-
-  const tc = teamFill[team];
-  const el = document.createElement('div');
-  el.id = 'power-spin';
-
-  el.innerHTML = `
-    <div class="ps-backdrop"></div>
-    <div class="ps-card" style="--tc:${tc}">
-      <div class="ps-header" style="color:${tc}">⚡ قوة عشوائية ⚡</div>
-      <div class="ps-team" style="color:${tc}">${names[team]}</div>
-      <div class="ps-wheel" id="ps-wheel">
-        ${POWERS.map((p,i) => `<div class="ps-slot" style="--i:${i}">${p.emoji} ${p.name}</div>`).join('')}
-      </div>
-      <div class="ps-landing" id="ps-landing" style="display:none">
-        <div class="ps-big-emoji">${power.emoji}</div>
-        <div class="ps-power-name" style="color:${power.color}">${power.name}</div>
-        <div class="ps-power-desc">${power.desc}</div>
-      </div>
-      <div class="ps-btns" id="ps-btns" style="display:none">
-        <button class="ps-btn ps-use" onclick="activatePower('${team}','${power.id}')">استخدم الآن ▶</button>
-        <button class="ps-btn ps-save" onclick="savePower('${team}',${JSON.stringify(power).replace(/"/g,'&quot;')})">احتفظ بها 💾</button>
-        <button class="ps-btn ps-skip" onclick="closePowerSpin()">تخطَّ ✕</button>
-      </div>
-    </div>`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('ps-visible'));
-
-  snd(() => unlockAudio().then(a => { if (!a) return; try {
-    for (let i = 0; i < 8; i++) {
-      const o = a.createOscillator(), g = a.createGain();
-      o.connect(g); g.connect(a.destination); o.type = 'sine';
-      o.frequency.value = 300 + i * 120;
-      const t = a.currentTime + i * 0.08;
-      g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-      o.start(t); o.stop(t + 0.1);
-    }
-  } catch(e){} }));
-
-  const wheel = el.querySelector('#ps-wheel');
-  const slotH = 48;
-  let speed = 22, pos = 0, ticks = 0, targetTicks = 28 + Math.floor(Math.random() * 16);
-  const targetIdx = POWERS.indexOf(power);
-
-  function spinStep() {
-    if (ticks < targetTicks) {
-      speed = ticks > targetTicks * 0.65 ? Math.max(3, speed * 0.88) : speed;
-      pos -= speed;
-      wheel.style.transform = `translateY(${pos % (POWERS.length * slotH)}px)`;
-      ticks++;
-      setTimeout(spinStep, 16 + (ticks > targetTicks * 0.7 ? ticks * 1.2 : 0));
-    } else {
-      wheel.style.transform = `translateY(${-targetIdx * slotH}px)`;
-      wheel.style.transition = 'transform 0.3s cubic-bezier(.175,.885,.32,1.5)';
-      setTimeout(() => revealPower(el, power, tc), 400);
-    }
-  }
-  setTimeout(spinStep, 300);
-}
-
-function revealPower(el, power, tc) {
-  el.querySelector('#ps-wheel').style.display = 'none';
-  el.querySelector('#ps-landing').style.display = 'flex';
-  el.querySelector('#ps-btns').style.display = 'flex';
-
-  snd(() => unlockAudio().then(a => { if (!a) return; try {
-    [523, 659, 784, 1047].forEach((f, i) => {
-      const o = a.createOscillator(), g = a.createGain();
-      o.connect(g); g.connect(a.destination); o.type = 'triangle'; o.frequency.value = f;
-      const t = a.currentTime + i * 0.1;
-      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      o.start(t); o.stop(t + 0.35);
-    });
-  } catch(e){} }));
-}
-
-function closePowerSpin() {
-  const el = document.getElementById('power-spin');
-  if (!el) return;
-  el.classList.remove('ps-visible');
-  setTimeout(() => el.remove(), 300);
-}
-
-function savePower(team, power) {
-  heldPowers[team] = power;
-  updatePowerBadges();
-  closePowerSpin();
-  showPowerToast(`💾 ${names[team]} احتفظ بـ ${power.emoji} ${power.name}`);
-}
-
-function activatePower(team, powerId, fromSave) {
-  if (!fromSave) closePowerSpin();
-  const power = POWERS.find(p => p.id === powerId);
-  if (!power) return;
-
-  const opp = team === 'green' ? 'orange' : 'green';
-
-  switch (powerId) {
-    case 'shield':
-      showPowerToast(`🛡️ اختر خلية لتحميها — انقر عليها`);
-      setPowerPickMode(team, 'shield');
-      break;
-    case 'bomb':
-      showPowerToast(`💣 انقر على خليتين للخصم لتفجيرهما`);
-      setPowerPickMode(opp, 'bomb', 2);
-      break;
-    case 'steal':
-      showPowerToast(`⚡ انقر على خلية الخصم لسرقتها`);
-      setPowerPickMode(opp, 'steal_from', 1, team);
-      break;
-    case 'freeze':
-      frozenTeam = opp;
-      if (frozenTimer) clearTimeout(frozenTimer);
-      frozenTimer = setTimeout(() => { frozenTeam = null; updateFreezeUI(); }, 5000);
-      updateFreezeUI();
-      showPowerToast(`❄️ ${names[opp]} مجمَّد لمدة 5 ثوانٍ!`);
-      break;
-    case 'double':
-      heldPowers[team] = { ...power, active: true };
-      updatePowerBadges();
-      showPowerToast(`⭐ خليتك القادمة تساوي نقطتين!`);
-      break;
-    case 'shuffle':
-      doShuffle(opp);
-      showPowerToast(`🌀 تم خلط 3 خلايا من ${names[opp]}!`);
-      break;
-  }
-  if (fromSave) { heldPowers[team] = null; updatePowerBadges(); }
-}
-
-function setPowerPickMode(targetTeam, type, count = 1, beneficiary = null) {
-  powerPickMode = { targetTeam, type, count, remaining: count, beneficiary };
-  showPowerToast(count > 1 ? `انقر على ${count} خلايا` : `انقر على خلية`, 8000);
-}
-
-function handlePowerPick(cellId) {
-  if (!powerPickMode) return false;
-  const { targetTeam, type, beneficiary } = powerPickMode;
-  const cell = cells.find(c => c.id === cellId);
-  if (!cell) return false;
-
-  if (type === 'shield') {
-    if (cell.owner !== targetTeam && cell.owner !== (targetTeam === 'green' ? 'orange' : 'green')) return false;
-    shieldedCells.add(cellId);
-    draw();
-    showPowerToast(`🛡️ الخلية "${cell.letter}" محمية الآن!`);
-    powerPickMode = null; return true;
-  }
-  if (type === 'bomb') {
-    if (cell.owner !== targetTeam) return false;
-    shieldedCells.delete(cellId);
-    cell.owner = null; if (revealMode) cell.revealed = false;
-    draw();
-    powerPickMode.remaining--;
-    if (powerPickMode.remaining <= 0) { powerPickMode = null; showPowerToast(`💣 تم التفجير!`); }
-    else showPowerToast(`💣 انقر على خلية أخرى`);
-    return true;
-  }
-  if (type === 'steal_from') {
-    if (cell.owner !== targetTeam) return false;
-    if (shieldedCells.has(cellId)) { showPowerToast(`🛡️ هذه الخلية محمية!`); return true; }
-    cell.owner = beneficiary; draw();
-    showPowerToast(`⚡ تمت السرقة!`);
-    powerPickMode = null; return true;
-  }
-  return false;
-}
-
-function doShuffle(team) {
-  const owned = cells.filter(c => c.owner === team);
-  if (owned.length < 3) { showPowerToast('ليس لديه خلايا كافية'); return; }
-  const picks = owned.sort(() => Math.random() - 0.5).slice(0, 3);
-  const letters = picks.map(c => c.letter);
-  letters.sort(() => Math.random() - 0.5);
-  picks.forEach((c, i) => c.letter = letters[i]);
-  draw();
-}
-
-function updateFreezeUI() {
-  // Disabled
-}
-
+// ── Powers mode removed — stub keeps HTML onclick from throwing ──
+var powersMode = false;
+function togglePowersMode() {}
 function updatePowerBadges() {
-  // Powers disabled — hide all badges
   ['g','o'].forEach(id => {
-    const badge = document.getElementById('power-badge-' + id);
-    if (badge) badge.style.display = 'none';
+    const b = document.getElementById('power-badge-' + id);
+    if (b) b.style.display = 'none';
   });
-}
-
-function showPowerToast(msg, duration = 3000) {
-  const old = document.getElementById('power-toast');
-  if (old) old.remove();
-  const el = document.createElement('div');
-  el.id = 'power-toast';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('pt-show'));
-  setTimeout(() => { el.classList.remove('pt-show'); setTimeout(() => el.remove(), 400); }, duration);
-}
-
-function isShielded(cellId) { return shieldedCells.has(cellId); }
-
-function resetPowers() {
-  heldPowers = { green: null, orange: null };
-  frozenTeam = null;
-  if (frozenTimer) clearTimeout(frozenTimer);
-  shieldedCells.clear();
-  powerPickMode = null;
-  updatePowerBadges();
-  updateFreezeUI();
 }
